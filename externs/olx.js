@@ -1059,7 +1059,7 @@ olx.control.FullScreenOptions.prototype.className;
 
 
 /**
- * Text label to use for the button. Default is `\u2194` (an arrow).
+ * Text label to use for the button. Default is `\u2922` (NORTH EAST AND SOUTH WEST ARROW).
  * Instead of text, also a Node (e.g. a `span` element) can be used.
  * @type {string|Node|undefined}
  * @api
@@ -1373,7 +1373,7 @@ olx.control.RotateOptions.prototype.render;
 
 
 /**
- * Function called when the control is clicked. This will override the 
+ * Function called when the control is clicked. This will override the
  * default resetNorth.
  * @type {function()|undefined}
  * @api
@@ -4935,8 +4935,8 @@ olx.source.StamenOptions.prototype.url;
  * @typedef {{attributions: (Array.<ol.Attribution>|undefined),
  *     crossOrigin: (null|string|undefined),
  *     imageExtent: (ol.Extent),
- *     imageSize: (ol.Size|undefined),
  *     imageLoadFunction: (ol.ImageLoadFunctionType|undefined),
+ *     imageSize: (ol.Size|undefined),
  *     logo: (string|olx.LogoOptions|undefined),
  *     projection: ol.proj.ProjectionLike,
  *     url: string}}
@@ -4975,14 +4975,6 @@ olx.source.ImageStaticOptions.prototype.imageExtent;
 
 
 /**
- * Size of the image in pixels.
- * @type {ol.Size|undefined}
- * @api stable
- */
-olx.source.ImageStaticOptions.prototype.imageSize;
-
-
-/**
  * Optional function to load an image given a URL.
  * @type {ol.TileLoadFunctionType|undefined}
  * @api
@@ -5004,6 +4996,15 @@ olx.source.ImageStaticOptions.prototype.logo;
  * @api
  */
 olx.source.ImageStaticOptions.prototype.projection;
+
+
+/**
+ * Size of the image in pixels. Usually the image size is auto-detected, so this
+ * only needs to be set if auto-detection fails for some reason.
+ * @type {ol.Size|undefined}
+ * @api stable
+ */
+olx.source.ImageStaticOptions.prototype.imageSize;
 
 
 /**
