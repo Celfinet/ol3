@@ -25,7 +25,6 @@ ol.source.WMTSRequestEncoding = {
 };
 
 
-
 /**
  * @classdesc
  * Layer source for tile data from WMTS servers.
@@ -53,7 +52,7 @@ ol.source.WMTS = function(options) {
 
   /**
    * @private
-   * @type {Object}
+   * @type {!Object}
    */
   this.dimensions_ = options.dimensions !== undefined ? options.dimensions : {};
 
@@ -61,8 +60,8 @@ ol.source.WMTS = function(options) {
    * @private
    * @type {string}
    */
-  this.coordKeyPrefix_ = '';
-  this.resetCoordKeyPrefix_();
+  this.dimensionsKey_ = '';
+  this.resetDimensionsKey_();
 
   /**
    * @private
@@ -86,12 +85,6 @@ ol.source.WMTS = function(options) {
   if (urls === undefined && options.url !== undefined) {
     urls = ol.TileUrlFunction.expandUrl(options.url);
   }
-
-  /**
-   * @private
-   * @type {!Array.<string>}
-   */
-  this.urls_ = urls || [];
 
   // FIXME: should we guess this requestEncoding from options.url(s)
   //        structure? that would mean KVP only if a template is not provided.
@@ -175,9 +168,9 @@ ol.source.WMTS = function(options) {
         });
   }
 
-  var tileUrlFunction = this.urls_.length > 0 ?
+  var tileUrlFunction = (urls && urls.length > 0) ?
       ol.TileUrlFunction.createFromTileUrlFunctions(
-          this.urls_.map(createFromWMTSTemplate)) :
+          urls.map(createFromWMTSTemplate)) :
       ol.TileUrlFunction.nullTileUrlFunction;
 
   goog.base(this, {
@@ -191,6 +184,7 @@ ol.source.WMTS = function(options) {
     tileLoadFunction: options.tileLoadFunction,
     tilePixelRatio: options.tilePixelRatio,
     tileUrlFunction: tileUrlFunction,
+    urls: urls,
     wrapX: options.wrapX !== undefined ? options.wrapX : false
   });
 
@@ -202,7 +196,7 @@ goog.inherits(ol.source.WMTS, ol.source.TileImage);
  * Get the dimensions, i.e. those passed to the constructor through the
  * "dimensions" option, and possibly updated using the updateDimensions
  * method.
- * @return {Object} Dimensions.
+ * @return {!Object} Dimensions.
  * @api
  */
 ol.source.WMTS.prototype.getDimensions = function() {
@@ -223,8 +217,8 @@ ol.source.WMTS.prototype.getFormat = function() {
 /**
  * @inheritDoc
  */
-ol.source.WMTS.prototype.getKeyZXY = function(z, x, y) {
-  return this.coordKeyPrefix_ + goog.base(this, 'getKeyZXY', z, x, y);
+ol.source.WMTS.prototype.getKeyParams = function() {
+  return this.dimensionsKey_;
 };
 
 
@@ -269,16 +263,6 @@ ol.source.WMTS.prototype.getStyle = function() {
 
 
 /**
- * Return the URLs used for this WMTS source.
- * @return {!Array.<string>} URLs.
- * @api
- */
-ol.source.WMTS.prototype.getUrls = function() {
-  return this.urls_;
-};
-
-
-/**
  * Return the version of the WMTS source.
  * @return {string} Version.
  * @api
@@ -291,13 +275,13 @@ ol.source.WMTS.prototype.getVersion = function() {
 /**
  * @private
  */
-ol.source.WMTS.prototype.resetCoordKeyPrefix_ = function() {
+ol.source.WMTS.prototype.resetDimensionsKey_ = function() {
   var i = 0;
   var res = [];
   for (var key in this.dimensions_) {
     res[i++] = key + '-' + this.dimensions_[key];
   }
-  this.coordKeyPrefix_ = res.join('/');
+  this.dimensionsKey_ = res.join('/');
 };
 
 
@@ -308,7 +292,7 @@ ol.source.WMTS.prototype.resetCoordKeyPrefix_ = function() {
  */
 ol.source.WMTS.prototype.updateDimensions = function(dimensions) {
   goog.object.extend(this.dimensions_, dimensions);
-  this.resetCoordKeyPrefix_();
+  this.resetDimensionsKey_();
   this.changed();
 };
 
@@ -320,19 +304,19 @@ ol.source.WMTS.prototype.updateDimensions = function(dimensions) {
  *                  the layer will apply if not provided.
  *
  * Required config properties:
- * layer - {String} The layer identifier.
+ *  - layer - {string} The layer identifier.
  *
  * Optional config properties:
- * matrixSet - {String} The matrix set identifier, required if there is
- *      more than one matrix set in the layer capabilities.
- * projection - {String} The desired CRS when no matrixSet is specified.
- *     eg: "EPSG:3857". If the desired projection is not available,
- *     an error is thrown.
- * requestEncoding - {String} url encoding format for the layer. Default is the
- *     first tile url format found in the GetCapabilities response.
- * style - {String} The name of the style
- * format - {String} Image format for the layer. Default is the first
- *     format returned in the GetCapabilities response.
+ *  - matrixSet - {string} The matrix set identifier, required if there is
+ *       more than one matrix set in the layer capabilities.
+ *  - projection - {string} The desired CRS when no matrixSet is specified.
+ *       eg: "EPSG:3857". If the desired projection is not available,
+ *       an error is thrown.
+ *  - requestEncoding - {string} url encoding format for the layer. Default is
+ *       the first tile url format found in the GetCapabilities response.
+ *  - style - {string} The name of the style
+ *  - format - {string} Image format for the layer. Default is the first
+ *       format returned in the GetCapabilities response.
  * @return {olx.source.WMTSOptions} WMTS source options object.
  * @api
  */

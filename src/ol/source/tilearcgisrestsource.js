@@ -7,13 +7,11 @@ goog.require('goog.string');
 goog.require('goog.uri.utils');
 goog.require('ol');
 goog.require('ol.TileCoord');
-goog.require('ol.TileUrlFunction');
 goog.require('ol.extent');
 goog.require('ol.proj');
 goog.require('ol.size');
 goog.require('ol.source.TileImage');
 goog.require('ol.tilecoord');
-
 
 
 /**
@@ -44,20 +42,10 @@ ol.source.TileArcGISRest = function(opt_options) {
     reprojectionErrorThreshold: options.reprojectionErrorThreshold,
     tileGrid: options.tileGrid,
     tileLoadFunction: options.tileLoadFunction,
-    tileUrlFunction: goog.bind(this.tileUrlFunction_, this),
+    url: options.url,
+    urls: options.urls,
     wrapX: options.wrapX !== undefined ? options.wrapX : true
   });
-
-  var urls = options.urls;
-  if (urls === undefined && options.url !== undefined) {
-    urls = ol.TileUrlFunction.expandUrl(options.url);
-  }
-
-  /**
-   * @private
-   * @type {!Array.<string>}
-   */
-  this.urls_ = urls || [];
 
   /**
    * @private
@@ -96,12 +84,11 @@ ol.source.TileArcGISRest.prototype.getParams = function() {
  * @return {string|undefined} Request URL.
  * @private
  */
-ol.source.TileArcGISRest.prototype.getRequestUrl_ =
-    function(tileCoord, tileSize, tileExtent,
+ol.source.TileArcGISRest.prototype.getRequestUrl_ = function(tileCoord, tileSize, tileExtent,
         pixelRatio, projection, params) {
 
-  var urls = this.urls_;
-  if (urls.length === 0) {
+  var urls = this.urls;
+  if (!urls) {
     return undefined;
   }
 
@@ -112,7 +99,9 @@ ol.source.TileArcGISRest.prototype.getRequestUrl_ =
   params['BBOX'] = tileExtent.join(',');
   params['BBOXSR'] = srid;
   params['IMAGESR'] = srid;
-  params['DPI'] = Math.round(90 * pixelRatio);
+  params['DPI'] = Math.round(
+      params['DPI'] ? params['DPI'] * pixelRatio : 90 * pixelRatio
+      );
 
   var url;
   if (urls.length == 1) {
@@ -129,11 +118,9 @@ ol.source.TileArcGISRest.prototype.getRequestUrl_ =
   // If a MapServer, use export. If an ImageServer, use exportImage.
   if (goog.string.endsWith(url, 'MapServer/')) {
     url = url + 'export';
-  }
-  else if (goog.string.endsWith(url, 'ImageServer/')) {
+  } else if (goog.string.endsWith(url, 'ImageServer/')) {
     url = url + 'exportImage';
-  }
-  else {
+  } else {
     goog.asserts.fail('Unknown Rest Service', url);
   }
 
@@ -142,63 +129,17 @@ ol.source.TileArcGISRest.prototype.getRequestUrl_ =
 
 
 /**
- * @param {number} z Z.
- * @param {number} pixelRatio Pixel ratio.
- * @param {ol.proj.Projection} projection Projection.
- * @return {ol.Size} Size.
+ * @inheritDoc
  */
-ol.source.TileArcGISRest.prototype.getTilePixelSize =
-    function(z, pixelRatio, projection) {
-  var tileSize = goog.base(this, 'getTilePixelSize', z, pixelRatio, projection);
-  if (pixelRatio == 1) {
-    return tileSize;
-  } else {
-    return ol.size.scale(tileSize, pixelRatio, this.tmpSize);
-  }
+ol.source.TileArcGISRest.prototype.getTilePixelRatio = function(pixelRatio) {
+  return pixelRatio;
 };
 
 
 /**
- * Return the URLs used for this ArcGIS source.
- * @return {!Array.<string>} URLs.
- * @api stable
+ * @inheritDoc
  */
-ol.source.TileArcGISRest.prototype.getUrls = function() {
-  return this.urls_;
-};
-
-
-/**
- * Set the URL to use for requests.
- * @param {string|undefined} url URL.
- * @api stable
- */
-ol.source.TileArcGISRest.prototype.setUrl = function(url) {
-  var urls = url !== undefined ? ol.TileUrlFunction.expandUrl(url) : null;
-  this.setUrls(urls);
-};
-
-
-/**
- * Set the URLs to use for requests.
- * @param {Array.<string>|undefined} urls URLs.
- * @api stable
- */
-ol.source.TileArcGISRest.prototype.setUrls = function(urls) {
-  this.urls_ = urls || [];
-  this.changed();
-};
-
-
-/**
- * @param {ol.TileCoord} tileCoord Tile coordinate.
- * @param {number} pixelRatio Pixel ratio.
- * @param {ol.proj.Projection} projection Projection.
- * @return {string|undefined} Tile URL.
- * @private
- */
-ol.source.TileArcGISRest.prototype.tileUrlFunction_ =
-    function(tileCoord, pixelRatio, projection) {
+ol.source.TileArcGISRest.prototype.fixedTileUrlFunction = function(tileCoord, pixelRatio, projection) {
 
   var tileGrid = this.getTileGrid();
   if (!tileGrid) {

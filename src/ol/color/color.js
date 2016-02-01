@@ -145,9 +145,6 @@ ol.color.equals = function(color1, color2) {
  * @return {ol.Color} Color.
  */
 ol.color.fromString = (
-    /**
-     * @return {function(string): ol.Color}
-     */
     function() {
 
       // We maintain a small cache of parsed strings.  To provide cheap LRU-like
@@ -209,8 +206,7 @@ ol.color.fromStringInternal_ = function(s) {
 
   var isHex = false;
   if (ol.ENABLE_NAMED_COLORS && goog.color.names.hasOwnProperty(s)) {
-    // goog.color.names does not have a type declaration, so add a typecast
-    s = /** @type {string} */ (goog.color.names[s]);
+    s = goog.color.names[s];
     isHex = true;
   }
 

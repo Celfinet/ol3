@@ -21,7 +21,6 @@ goog.require('ol.easing');
 goog.require('ol.math');
 
 
-
 /**
  * @classdesc
  * A slider type of control for zooming.
@@ -75,7 +74,7 @@ ol.control.ZoomSlider = function(opt_options) {
    * @private
    * @type {number}
    */
-  this.duration_ = options.duration ? options.duration : 200;
+  this.duration_ = options.duration !== undefined ? options.duration : 200;
 
   var className = options.className ? options.className : 'ol-zoomslider';
   var thumbElement = goog.dom.createDom('BUTTON', {

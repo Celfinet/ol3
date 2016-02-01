@@ -4,7 +4,6 @@ goog.require('goog.asserts');
 goog.require('goog.object');
 
 
-
 /**
  * Implements a Least-Recently-Used cache where the keys do not conflict with
  * Object's properties (e.g. 'hasOwnProperty' is not allowed as a key). Expiring
@@ -223,6 +222,16 @@ ol.structs.LRUCache.prototype.pop = function() {
   }
   --this.count_;
   return entry.value_;
+};
+
+
+/**
+ * @param {string} key Key.
+ * @param {T} value Value.
+ */
+ol.structs.LRUCache.prototype.replace = function(key, value) {
+  this.get(key);  // update `newest_`
+  this.entries_[key].value_ = value;
 };
 
 

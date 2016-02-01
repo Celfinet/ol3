@@ -19,6 +19,7 @@ goog.require('ol.tilegrid.TileGrid');
 
 /**
  * @typedef {{attributions: (Array.<ol.Attribution>|undefined),
+ *            cacheSize: (number|undefined),
  *            extent: (ol.Extent|undefined),
  *            logo: (string|olx.LogoOptions|undefined),
  *            opaque: (boolean|undefined),
@@ -29,7 +30,6 @@ goog.require('ol.tilegrid.TileGrid');
  *            wrapX: (boolean|undefined)}}
  */
 ol.source.TileOptions;
-
 
 
 /**
@@ -77,7 +77,7 @@ ol.source.Tile = function(options) {
    * @protected
    * @type {ol.TileCache}
    */
-  this.tileCache = new ol.TileCache();
+  this.tileCache = new ol.TileCache(options.cacheSize);
 
   /**
    * @protected
@@ -118,8 +118,7 @@ ol.source.Tile.prototype.expireCache = function(projection, usedTiles) {
  *     considered loaded.
  * @return {boolean} The tile range is fully covered with loaded tiles.
  */
-ol.source.Tile.prototype.forEachLoadedTile =
-    function(projection, z, tileRange, callback) {
+ol.source.Tile.prototype.forEachLoadedTile = function(projection, z, tileRange, callback) {
   var tileCache = this.getTileCacheForProjection(projection);
   if (!tileCache) {
     return false;
@@ -156,6 +155,17 @@ ol.source.Tile.prototype.getGutter = function() {
 
 
 /**
+ * Return the "parameters" key, a string composed of the source's
+ * parameters/dimensions.
+ * @return {string} The parameters key.
+ * @protected
+ */
+ol.source.Tile.prototype.getKeyParams = function() {
+  return '';
+};
+
+
+/**
  * @param {number} z Z.
  * @param {number} x X.
  * @param {number} y Y.
@@ -166,9 +176,10 @@ ol.source.Tile.prototype.getKeyZXY = ol.tilecoord.getKeyZXY;
 
 
 /**
+ * @param {ol.proj.Projection} projection Projection.
  * @return {boolean} Opaque.
  */
-ol.source.Tile.prototype.getOpaque = function() {
+ol.source.Tile.prototype.getOpaque = function(projection) {
   return this.opaque_;
 };
 
@@ -231,9 +242,10 @@ ol.source.Tile.prototype.getTileCacheForProjection = function(projection) {
 
 
 /**
+ * @param {number} pixelRatio Pixel ratio.
  * @return {number} Tile pixel ratio.
  */
-ol.source.Tile.prototype.getTilePixelRatio = function() {
+ol.source.Tile.prototype.getTilePixelRatio = function(pixelRatio) {
   return this.tilePixelRatio_;
 };
 
@@ -244,11 +256,15 @@ ol.source.Tile.prototype.getTilePixelRatio = function() {
  * @param {ol.proj.Projection} projection Projection.
  * @return {ol.Size} Tile size.
  */
-ol.source.Tile.prototype.getTilePixelSize =
-    function(z, pixelRatio, projection) {
+ol.source.Tile.prototype.getTilePixelSize = function(z, pixelRatio, projection) {
   var tileGrid = this.getTileGridForProjection(projection);
-  return ol.size.scale(ol.size.toSize(tileGrid.getTileSize(z), this.tmpSize),
-      this.tilePixelRatio_, this.tmpSize);
+  var tilePixelRatio = this.getTilePixelRatio(pixelRatio);
+  var tileSize = ol.size.toSize(tileGrid.getTileSize(z), this.tmpSize);
+  if (tilePixelRatio == 1) {
+    return tileSize;
+  } else {
+    return ol.size.scale(tileSize, tilePixelRatio, this.tmpSize);
+  }
 };
 
 
@@ -261,8 +277,7 @@ ol.source.Tile.prototype.getTilePixelSize =
  * @return {ol.TileCoord} Tile coordinate to be passed to the tileUrlFunction or
  *     null if no tile URL should be created for the passed `tileCoord`.
  */
-ol.source.Tile.prototype.getTileCoordForTileUrlFunction =
-    function(tileCoord, opt_projection) {
+ol.source.Tile.prototype.getTileCoordForTileUrlFunction = function(tileCoord, opt_projection) {
   var projection = opt_projection !== undefined ?
       opt_projection : this.getProjection();
   var tileGrid = this.getTileGridForProjection(projection);
@@ -282,7 +297,6 @@ ol.source.Tile.prototype.getTileCoordForTileUrlFunction =
  * @param {ol.proj.Projection} projection Projection.
  */
 ol.source.Tile.prototype.useTile = ol.nullFunction;
-
 
 
 /**

@@ -3,20 +3,18 @@
 
 goog.provide('ol.renderer.canvas.TileLayer');
 
-goog.require('goog.array');
 goog.require('goog.asserts');
 goog.require('goog.vec.Mat4');
 goog.require('ol.Size');
 goog.require('ol.TileRange');
 goog.require('ol.TileState');
+goog.require('ol.array');
 goog.require('ol.dom');
 goog.require('ol.extent');
 goog.require('ol.layer.Tile');
 goog.require('ol.renderer.canvas.Layer');
 goog.require('ol.size');
-goog.require('ol.tilecoord');
 goog.require('ol.vec.Mat4');
-
 
 
 /**
@@ -123,8 +121,7 @@ ol.renderer.canvas.TileLayer.prototype.getImageTransform = function() {
 /**
  * @inheritDoc
  */
-ol.renderer.canvas.TileLayer.prototype.prepareFrame =
-    function(frameState, layerState) {
+ol.renderer.canvas.TileLayer.prototype.prepareFrame = function(frameState, layerState) {
 
   //
   // Warning! You're entering a dangerous zone!
@@ -316,19 +313,29 @@ ol.renderer.canvas.TileLayer.prototype.prepareFrame =
 
   var tmpExtent = ol.extent.createEmpty();
   var tmpTileRange = new ol.TileRange(0, 0, 0, 0);
-  var childTileRange, fullyLoaded, tile, tileState, x, y;
+  var childTileRange, fullyLoaded, tile, x, y;
+  var drawableTile = (
+      /**
+       * @param {!ol.Tile} tile Tile.
+       * @return {boolean} Tile is selected.
+       */
+      function(tile) {
+        var tileState = tile.getState();
+        return tileState == ol.TileState.LOADED ||
+            tileState == ol.TileState.EMPTY ||
+            tileState == ol.TileState.ERROR && !useInterimTilesOnError;
+      });
   for (x = tileRange.minX; x <= tileRange.maxX; ++x) {
     for (y = tileRange.minY; y <= tileRange.maxY; ++y) {
-
       tile = tileSource.getTile(z, x, y, pixelRatio, projection);
-      tileState = tile.getState();
-      if (tileState == ol.TileState.LOADED ||
-          tileState == ol.TileState.EMPTY ||
-          (tileState == ol.TileState.ERROR && !useInterimTilesOnError)) {
-        tilesToDrawByZ[z][ol.tilecoord.toString(tile.tileCoord)] = tile;
+      if (!drawableTile(tile) && tile.interimTile) {
+        tile = tile.interimTile;
+      }
+      goog.asserts.assert(tile);
+      if (drawableTile(tile)) {
+        tilesToDrawByZ[z][tile.tileCoord.toString()] = tile;
         continue;
       }
-
       fullyLoaded = tileGrid.forEachTileCoordParentTileRange(
           tile.tileCoord, findLoadedTiles, null, tmpTileRange, tmpExtent);
       if (!fullyLoaded) {
@@ -355,12 +362,12 @@ ol.renderer.canvas.TileLayer.prototype.prepareFrame =
 
   /** @type {Array.<number>} */
   var zs = Object.keys(tilesToDrawByZ).map(Number);
-  goog.array.sort(zs);
-  var opaque = tileSource.getOpaque();
+  zs.sort(ol.array.numberSafeCompareFunction);
+  var opaque = tileSource.getOpaque(projection);
   var origin = ol.extent.getTopLeft(tileGrid.getTileCoordExtent(
       [z, canvasTileRange.minX, canvasTileRange.maxY],
       tmpExtent));
-  var currentZ, index, scale, tileCoordKey, tileExtent, tilesToDraw;
+  var currentZ, index, scale, tileCoordKey, tileExtent, tileState, tilesToDraw;
   var ix, iy, interimTileRange, maxX, maxY;
   var height, width;
   for (i = 0, ii = zs.length; i < ii; ++i) {
@@ -449,8 +456,7 @@ ol.renderer.canvas.TileLayer.prototype.prepareFrame =
 /**
  * @inheritDoc
  */
-ol.renderer.canvas.TileLayer.prototype.forEachLayerAtPixel =
-    function(pixel, frameState, callback, thisArg) {
+ol.renderer.canvas.TileLayer.prototype.forEachLayerAtPixel = function(pixel, frameState, callback, thisArg) {
   if (!this.context_) {
     return undefined;
   }

@@ -57,7 +57,7 @@ describe('ol.interaction.Select', function() {
       })
     });
 
-    map.on('postrender', function() {
+    map.once('postrender', function() {
       done();
     });
   });
@@ -159,7 +159,6 @@ describe('ol.interaction.Select', function() {
   });
 
   describe('filter features using the filter option', function() {
-    var select;
 
     describe('with multi set to true', function() {
 

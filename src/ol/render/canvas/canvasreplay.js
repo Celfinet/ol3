@@ -47,7 +47,6 @@ ol.render.canvas.Instruction = {
 };
 
 
-
 /**
  * @constructor
  * @extends {ol.render.VectorContext}
@@ -139,6 +138,12 @@ ol.render.canvas.Replay = function(tolerance, maxExtent, resolution) {
    * @type {!goog.vec.Mat4.Number}
    */
   this.tmpLocalTransform_ = goog.vec.Mat4.createNumber();
+
+  /**
+   * @private
+   * @type {!goog.vec.Mat4.Number}
+   */
+  this.tmpLocalTransformInv_ = goog.vec.Mat4.createNumber();
 };
 goog.inherits(ol.render.canvas.Replay, ol.render.VectorContext);
 
@@ -152,8 +157,7 @@ goog.inherits(ol.render.canvas.Replay, ol.render.VectorContext);
  * @protected
  * @return {number} My end.
  */
-ol.render.canvas.Replay.prototype.appendFlatCoordinates =
-    function(flatCoordinates, offset, end, stride, close) {
+ol.render.canvas.Replay.prototype.appendFlatCoordinates = function(flatCoordinates, offset, end, stride, close) {
 
   var myEnd = this.coordinates.length;
   var extent = this.getBufferedMaxExtent();
@@ -202,8 +206,8 @@ ol.render.canvas.Replay.prototype.appendFlatCoordinates =
 
 /**
  * @protected
- * @param {ol.geom.Geometry} geometry Geometry.
- * @param {ol.Feature} feature Feature.
+ * @param {ol.geom.Geometry|ol.render.Feature} geometry Geometry.
+ * @param {ol.Feature|ol.render.Feature} feature Feature.
  */
 ol.render.canvas.Replay.prototype.beginGeometry = function(geometry, feature) {
   this.beginGeometryInstruction1_ =
@@ -224,7 +228,8 @@ ol.render.canvas.Replay.prototype.beginGeometry = function(geometry, feature) {
  * @param {Object.<string, boolean>} skippedFeaturesHash Ids of features
  *     to skip.
  * @param {Array.<*>} instructions Instructions array.
- * @param {function(ol.Feature): T|undefined} featureCallback Feature callback.
+ * @param {function((ol.Feature|ol.render.Feature)): T|undefined}
+ *     featureCallback Feature callback.
  * @param {ol.Extent=} opt_hitExtent Only check features that intersect this
  *     extent.
  * @return {T|undefined} Callback result.
@@ -245,20 +250,23 @@ ol.render.canvas.Replay.prototype.replay_ = function(
     goog.asserts.assert(pixelCoordinates === this.pixelCoordinates_,
         'pixelCoordinates should be the same as this.pixelCoordinates_');
   }
+  var skipFeatures = !goog.object.isEmpty(skippedFeaturesHash);
   var i = 0; // instruction index
   var ii = instructions.length; // end of instructions
   var d = 0; // data index
   var dd; // end of per-instruction data
   var localTransform = this.tmpLocalTransform_;
+  var localTransformInv = this.tmpLocalTransformInv_;
+  var prevX, prevY, roundX, roundY;
   while (i < ii) {
     var instruction = instructions[i];
     var type = /** @type {ol.render.canvas.Instruction} */ (instruction[0]);
     var feature, fill, stroke, text, x, y;
     switch (type) {
       case ol.render.canvas.Instruction.BEGIN_GEOMETRY:
-        feature = /** @type {ol.Feature} */ (instruction[1]);
-        var featureUid = goog.getUid(feature).toString();
-        if (skippedFeaturesHash[featureUid] !== undefined ||
+        feature = /** @type {ol.Feature|ol.render.Feature} */ (instruction[1]);
+        if ((skipFeatures &&
+            skippedFeaturesHash[goog.getUid(feature).toString()]) ||
             !feature.getGeometry()) {
           i = /** @type {number} */ (instruction[2]);
         } else if (opt_hitExtent !== undefined && !ol.extent.intersects(
@@ -319,8 +327,8 @@ ol.render.canvas.Replay.prototype.replay_ = function(
           x = pixelCoordinates[d] - anchorX;
           y = pixelCoordinates[d + 1] - anchorY;
           if (snapToPixel) {
-            x = (x + 0.5) | 0;
-            y = (y + 0.5) | 0;
+            x = Math.round(x);
+            y = Math.round(y);
           }
           if (scale != 1 || rotation !== 0) {
             var centerX = x + anchorX;
@@ -328,7 +336,7 @@ ol.render.canvas.Replay.prototype.replay_ = function(
             ol.vec.Mat4.makeTransform2D(
                 localTransform, centerX, centerY, scale, scale,
                 rotation, -centerX, -centerY);
-            context.setTransform(
+            context.transform(
                 goog.vec.Mat4.getElement(localTransform, 0, 0),
                 goog.vec.Mat4.getElement(localTransform, 1, 0),
                 goog.vec.Mat4.getElement(localTransform, 0, 1),
@@ -341,14 +349,24 @@ ol.render.canvas.Replay.prototype.replay_ = function(
             context.globalAlpha = alpha * opacity;
           }
 
-          context.drawImage(image, originX, originY, width, height,
-              x, y, width * pixelRatio, height * pixelRatio);
+          var w = (width + originX > image.width) ? image.width - originX : width;
+          var h = (height + originY > image.height) ? image.height - originY : height;
+
+          context.drawImage(image, originX, originY, w, h,
+              x, y, w * pixelRatio, h * pixelRatio);
 
           if (opacity != 1) {
             context.globalAlpha = alpha;
           }
           if (scale != 1 || rotation !== 0) {
-            context.setTransform(1, 0, 0, 1, 0, 0);
+            goog.vec.Mat4.invert(localTransform, localTransformInv);
+            context.transform(
+                goog.vec.Mat4.getElement(localTransformInv, 0, 0),
+                goog.vec.Mat4.getElement(localTransformInv, 1, 0),
+                goog.vec.Mat4.getElement(localTransformInv, 0, 1),
+                goog.vec.Mat4.getElement(localTransformInv, 1, 1),
+                goog.vec.Mat4.getElement(localTransformInv, 0, 3),
+                goog.vec.Mat4.getElement(localTransformInv, 1, 3));
           }
         }
         ++i;
@@ -387,7 +405,7 @@ ol.render.canvas.Replay.prototype.replay_ = function(
           if (scale != 1 || rotation !== 0) {
             ol.vec.Mat4.makeTransform2D(
                 localTransform, x, y, scale, scale, rotation, -x, -y);
-            context.setTransform(
+            context.transform(
                 goog.vec.Mat4.getElement(localTransform, 0, 0),
                 goog.vec.Mat4.getElement(localTransform, 1, 0),
                 goog.vec.Mat4.getElement(localTransform, 0, 1),
@@ -395,21 +413,51 @@ ol.render.canvas.Replay.prototype.replay_ = function(
                 goog.vec.Mat4.getElement(localTransform, 0, 3),
                 goog.vec.Mat4.getElement(localTransform, 1, 3));
           }
-          if (stroke) {
-            context.strokeText(text, x, y);
+
+          // Support multiple lines separated by \n
+          var lines = text.split('\n');
+          var numLines = lines.length;
+          var fontSize, lineY;
+          if (numLines > 1) {
+            // Estimate line height using width of capital M, and add padding
+            fontSize = Math.round(context.measureText('M').width * 1.5);
+            lineY = y - (((numLines - 1) / 2) * fontSize);
+          } else {
+            // No need to calculate line height/offset for a single line
+            fontSize = 0;
+            lineY = y;
           }
-          if (fill) {
-            context.fillText(text, x, y);
+
+          for (var lineIndex = 0; lineIndex < numLines; lineIndex++) {
+            var line = lines[lineIndex];
+            if (stroke) {
+              context.strokeText(line, x, lineY);
+            }
+            if (fill) {
+              context.fillText(line, x, lineY);
+            }
+
+            // Move next line down by fontSize px
+            lineY = lineY + fontSize;
           }
+
           if (scale != 1 || rotation !== 0) {
-            context.setTransform(1, 0, 0, 1, 0, 0);
+            goog.vec.Mat4.invert(localTransform, localTransformInv);
+            context.transform(
+                goog.vec.Mat4.getElement(localTransformInv, 0, 0),
+                goog.vec.Mat4.getElement(localTransformInv, 1, 0),
+                goog.vec.Mat4.getElement(localTransformInv, 0, 1),
+                goog.vec.Mat4.getElement(localTransformInv, 1, 1),
+                goog.vec.Mat4.getElement(localTransformInv, 0, 3),
+                goog.vec.Mat4.getElement(localTransformInv, 1, 3));
           }
         }
         ++i;
         break;
       case ol.render.canvas.Instruction.END_GEOMETRY:
         if (featureCallback !== undefined) {
-          feature = /** @type {ol.Feature} */ (instruction[1]);
+          feature =
+              /** @type {ol.Feature|ol.render.Feature} */ (instruction[1]);
           var result = featureCallback(feature);
           if (result) {
             return result;
@@ -428,9 +476,25 @@ ol.render.canvas.Replay.prototype.replay_ = function(
         goog.asserts.assert(goog.isNumber(instruction[2]),
             '3rd instruction should be a number');
         dd = /** @type {number} */ (instruction[2]);
-        context.moveTo(pixelCoordinates[d], pixelCoordinates[d + 1]);
+        x = pixelCoordinates[d];
+        y = pixelCoordinates[d + 1];
+        roundX = (x + 0.5) | 0;
+        roundY = (y + 0.5) | 0;
+        if (roundX !== prevX || roundY !== prevY) {
+          context.moveTo(x, y);
+          prevX = roundX;
+          prevY = roundY;
+        }
         for (d += 2; d < dd; d += 2) {
-          context.lineTo(pixelCoordinates[d], pixelCoordinates[d + 1]);
+          x = pixelCoordinates[d];
+          y = pixelCoordinates[d + 1];
+          roundX = (x + 0.5) | 0;
+          roundY = (y + 0.5) | 0;
+          if (roundX !== prevX || roundY !== prevY) {
+            context.lineTo(x, y);
+            prevX = roundX;
+            prevY = roundY;
+          }
         }
         ++i;
         break;
@@ -464,6 +528,8 @@ ol.render.canvas.Replay.prototype.replay_ = function(
         if (ol.has.CANVAS_LINE_DASH) {
           context.setLineDash(/** @type {Array.<number>} */ (instruction[6]));
         }
+        prevX = NaN;
+        prevY = NaN;
         ++i;
         break;
       case ol.render.canvas.Instruction.SET_TEXT_STYLE:
@@ -517,7 +583,8 @@ ol.render.canvas.Replay.prototype.replay = function(
  * @param {number} viewRotation View rotation.
  * @param {Object.<string, boolean>} skippedFeaturesHash Ids of features
  *     to skip.
- * @param {function(ol.Feature): T=} opt_featureCallback Feature callback.
+ * @param {function((ol.Feature|ol.render.Feature)): T=} opt_featureCallback
+ *     Feature callback.
  * @param {ol.Extent=} opt_hitExtent Only check features that intersect this
  *     extent.
  * @return {T|undefined} Callback result.
@@ -535,8 +602,7 @@ ol.render.canvas.Replay.prototype.replayHitDetection = function(
 /**
  * @private
  */
-ol.render.canvas.Replay.prototype.reverseHitDetectionInstructions_ =
-    function() {
+ol.render.canvas.Replay.prototype.reverseHitDetectionInstructions_ = function() {
   var hitDetectionInstructions = this.hitDetectionInstructions;
   // step 1 - reverse array
   hitDetectionInstructions.reverse();
@@ -564,8 +630,8 @@ ol.render.canvas.Replay.prototype.reverseHitDetectionInstructions_ =
 
 
 /**
- * @param {ol.geom.Geometry} geometry Geometry.
- * @param {ol.Feature} feature Feature.
+ * @param {ol.geom.Geometry|ol.render.Feature} geometry Geometry.
+ * @param {ol.Feature|ol.render.Feature} feature Feature.
  */
 ol.render.canvas.Replay.prototype.endGeometry = function(geometry, feature) {
   goog.asserts.assert(this.beginGeometryInstruction1_,
@@ -599,7 +665,6 @@ ol.render.canvas.Replay.prototype.finish = ol.nullFunction;
 ol.render.canvas.Replay.prototype.getBufferedMaxExtent = function() {
   return this.maxExtent;
 };
-
 
 
 /**
@@ -704,8 +769,7 @@ goog.inherits(ol.render.canvas.ImageReplay, ol.render.canvas.Replay);
  * @private
  * @return {number} My end.
  */
-ol.render.canvas.ImageReplay.prototype.drawCoordinates_ =
-    function(flatCoordinates, offset, end, stride) {
+ol.render.canvas.ImageReplay.prototype.drawCoordinates_ = function(flatCoordinates, offset, end, stride) {
   return this.appendFlatCoordinates(
       flatCoordinates, offset, end, stride, false);
 };
@@ -714,8 +778,7 @@ ol.render.canvas.ImageReplay.prototype.drawCoordinates_ =
 /**
  * @inheritDoc
  */
-ol.render.canvas.ImageReplay.prototype.drawPointGeometry =
-    function(pointGeometry, feature) {
+ol.render.canvas.ImageReplay.prototype.drawPointGeometry = function(pointGeometry, feature) {
   if (!this.image_) {
     return;
   }
@@ -767,8 +830,7 @@ ol.render.canvas.ImageReplay.prototype.drawPointGeometry =
 /**
  * @inheritDoc
  */
-ol.render.canvas.ImageReplay.prototype.drawMultiPointGeometry =
-    function(multiPointGeometry, feature) {
+ol.render.canvas.ImageReplay.prototype.drawMultiPointGeometry = function(multiPointGeometry, feature) {
   if (!this.image_) {
     return;
   }
@@ -871,7 +933,6 @@ ol.render.canvas.ImageReplay.prototype.setImageStyle = function(imageStyle) {
 };
 
 
-
 /**
  * @constructor
  * @extends {ol.render.canvas.Replay}
@@ -929,8 +990,7 @@ goog.inherits(ol.render.canvas.LineStringReplay, ol.render.canvas.Replay);
  * @private
  * @return {number} end.
  */
-ol.render.canvas.LineStringReplay.prototype.drawFlatCoordinates_ =
-    function(flatCoordinates, offset, end, stride) {
+ol.render.canvas.LineStringReplay.prototype.drawFlatCoordinates_ = function(flatCoordinates, offset, end, stride) {
   var myBegin = this.coordinates.length;
   var myEnd = this.appendFlatCoordinates(
       flatCoordinates, offset, end, stride, false);
@@ -1003,8 +1063,7 @@ ol.render.canvas.LineStringReplay.prototype.setStrokeStyle_ = function() {
 /**
  * @inheritDoc
  */
-ol.render.canvas.LineStringReplay.prototype.drawLineStringGeometry =
-    function(lineStringGeometry, feature) {
+ol.render.canvas.LineStringReplay.prototype.drawLineStringGeometry = function(lineStringGeometry, feature) {
   var state = this.state_;
   goog.asserts.assert(state, 'state should not be null');
   var strokeStyle = state.strokeStyle;
@@ -1031,8 +1090,7 @@ ol.render.canvas.LineStringReplay.prototype.drawLineStringGeometry =
 /**
  * @inheritDoc
  */
-ol.render.canvas.LineStringReplay.prototype.drawMultiLineStringGeometry =
-    function(multiLineStringGeometry, feature) {
+ol.render.canvas.LineStringReplay.prototype.drawMultiLineStringGeometry = function(multiLineStringGeometry, feature) {
   var state = this.state_;
   goog.asserts.assert(state, 'state should not be null');
   var strokeStyle = state.strokeStyle;
@@ -1078,8 +1136,7 @@ ol.render.canvas.LineStringReplay.prototype.finish = function() {
 /**
  * @inheritDoc
  */
-ol.render.canvas.LineStringReplay.prototype.setFillStrokeStyle =
-    function(fillStyle, strokeStyle) {
+ol.render.canvas.LineStringReplay.prototype.setFillStrokeStyle = function(fillStyle, strokeStyle) {
   goog.asserts.assert(this.state_, 'this.state_ should not be null');
   goog.asserts.assert(!fillStyle, 'fillStyle should be null');
   goog.asserts.assert(strokeStyle, 'strokeStyle should not be null');
@@ -1108,7 +1165,6 @@ ol.render.canvas.LineStringReplay.prototype.setFillStrokeStyle =
     this.bufferedMaxExtent_ = null;
   }
 };
-
 
 
 /**
@@ -1170,8 +1226,7 @@ goog.inherits(ol.render.canvas.PolygonReplay, ol.render.canvas.Replay);
  * @private
  * @return {number} End.
  */
-ol.render.canvas.PolygonReplay.prototype.drawFlatCoordinatess_ =
-    function(flatCoordinates, offset, ends, stride) {
+ol.render.canvas.PolygonReplay.prototype.drawFlatCoordinatess_ = function(flatCoordinates, offset, ends, stride) {
   var state = this.state_;
   var beginPathInstruction = [ol.render.canvas.Instruction.BEGIN_PATH];
   this.instructions.push(beginPathInstruction);
@@ -1211,8 +1266,7 @@ ol.render.canvas.PolygonReplay.prototype.drawFlatCoordinatess_ =
 /**
  * @inheritDoc
  */
-ol.render.canvas.PolygonReplay.prototype.drawCircleGeometry =
-    function(circleGeometry, feature) {
+ol.render.canvas.PolygonReplay.prototype.drawCircleGeometry = function(circleGeometry, feature) {
   var state = this.state_;
   goog.asserts.assert(state, 'state should not be null');
   var fillStyle = state.fillStyle;
@@ -1264,8 +1318,7 @@ ol.render.canvas.PolygonReplay.prototype.drawCircleGeometry =
 /**
  * @inheritDoc
  */
-ol.render.canvas.PolygonReplay.prototype.drawPolygonGeometry =
-    function(polygonGeometry, feature) {
+ol.render.canvas.PolygonReplay.prototype.drawPolygonGeometry = function(polygonGeometry, feature) {
   var state = this.state_;
   goog.asserts.assert(state, 'state should not be null');
   var fillStyle = state.fillStyle;
@@ -1300,8 +1353,7 @@ ol.render.canvas.PolygonReplay.prototype.drawPolygonGeometry =
 /**
  * @inheritDoc
  */
-ol.render.canvas.PolygonReplay.prototype.drawMultiPolygonGeometry =
-    function(multiPolygonGeometry, feature) {
+ol.render.canvas.PolygonReplay.prototype.drawMultiPolygonGeometry = function(multiPolygonGeometry, feature) {
   var state = this.state_;
   goog.asserts.assert(state, 'state should not be null');
   var fillStyle = state.fillStyle;
@@ -1378,8 +1430,7 @@ ol.render.canvas.PolygonReplay.prototype.getBufferedMaxExtent = function() {
 /**
  * @inheritDoc
  */
-ol.render.canvas.PolygonReplay.prototype.setFillStrokeStyle =
-    function(fillStyle, strokeStyle) {
+ol.render.canvas.PolygonReplay.prototype.setFillStrokeStyle = function(fillStyle, strokeStyle) {
   goog.asserts.assert(this.state_, 'this.state_ should not be null');
   goog.asserts.assert(fillStyle || strokeStyle,
       'fillStyle or strokeStyle should not be null');
@@ -1471,7 +1522,6 @@ ol.render.canvas.PolygonReplay.prototype.setFillStrokeStyles_ = function() {
 };
 
 
-
 /**
  * @constructor
  * @extends {ol.render.canvas.Replay}
@@ -1558,8 +1608,7 @@ goog.inherits(ol.render.canvas.TextReplay, ol.render.canvas.Replay);
 /**
  * @inheritDoc
  */
-ol.render.canvas.TextReplay.prototype.drawText =
-    function(flatCoordinates, offset, end, stride, geometry, feature) {
+ol.render.canvas.TextReplay.prototype.drawText = function(flatCoordinates, offset, end, stride, geometry, feature) {
   if (this.text_ === '' || !this.textState_ ||
       (!this.textFillState_ && !this.textStrokeState_)) {
     return;
@@ -1591,8 +1640,7 @@ ol.render.canvas.TextReplay.prototype.drawText =
  * @param {ol.render.canvas.FillState} fillState Fill state.
  * @private
  */
-ol.render.canvas.TextReplay.prototype.setReplayFillState_ =
-    function(fillState) {
+ol.render.canvas.TextReplay.prototype.setReplayFillState_ = function(fillState) {
   var replayFillState = this.replayFillState_;
   if (replayFillState &&
       replayFillState.fillStyle == fillState.fillStyle) {
@@ -1616,8 +1664,7 @@ ol.render.canvas.TextReplay.prototype.setReplayFillState_ =
  * @param {ol.render.canvas.StrokeState} strokeState Stroke state.
  * @private
  */
-ol.render.canvas.TextReplay.prototype.setReplayStrokeState_ =
-    function(strokeState) {
+ol.render.canvas.TextReplay.prototype.setReplayStrokeState_ = function(strokeState) {
   var replayStrokeState = this.replayStrokeState_;
   if (replayStrokeState &&
       replayStrokeState.lineCap == strokeState.lineCap &&
@@ -1659,8 +1706,7 @@ ol.render.canvas.TextReplay.prototype.setReplayStrokeState_ =
  * @param {ol.render.canvas.TextState} textState Text state.
  * @private
  */
-ol.render.canvas.TextReplay.prototype.setReplayTextState_ =
-    function(textState) {
+ol.render.canvas.TextReplay.prototype.setReplayTextState_ = function(textState) {
   var replayTextState = this.replayTextState_;
   if (replayTextState &&
       replayTextState.font == textState.font &&
@@ -1785,7 +1831,6 @@ ol.render.canvas.TextReplay.prototype.setTextStyle = function(textStyle) {
 };
 
 
-
 /**
  * @constructor
  * @implements {ol.render.IReplayGroup}
@@ -1865,7 +1910,8 @@ ol.render.canvas.ReplayGroup.prototype.finish = function() {
  * @param {number} rotation Rotation.
  * @param {Object.<string, boolean>} skippedFeaturesHash Ids of features
  *     to skip.
- * @param {function(ol.Feature): T} callback Feature callback.
+ * @param {function((ol.Feature|ol.render.Feature)): T} callback Feature
+ *     callback.
  * @return {T|undefined} Callback result.
  * @template T
  */
@@ -1893,7 +1939,7 @@ ol.render.canvas.ReplayGroup.prototype.forEachFeatureAtCoordinate = function(
   return this.replayHitDetection_(context, transform, rotation,
       skippedFeaturesHash,
       /**
-       * @param {ol.Feature} feature Feature.
+       * @param {ol.Feature|ol.render.Feature} feature Feature.
        * @return {?} Callback result.
        */
       function(feature) {
@@ -1912,8 +1958,7 @@ ol.render.canvas.ReplayGroup.prototype.forEachFeatureAtCoordinate = function(
 /**
  * @inheritDoc
  */
-ol.render.canvas.ReplayGroup.prototype.getReplay =
-    function(zIndex, replayType) {
+ol.render.canvas.ReplayGroup.prototype.getReplay = function(zIndex, replayType) {
   var zIndexKey = zIndex !== undefined ? zIndex.toString() : '0';
   var replays = this.replaysByZIndex_[zIndexKey];
   if (replays === undefined) {
@@ -1949,32 +1994,35 @@ ol.render.canvas.ReplayGroup.prototype.isEmpty = function() {
  * @param {number} viewRotation View rotation.
  * @param {Object.<string, boolean>} skippedFeaturesHash Ids of features
  *     to skip.
+ * @param {boolean=} opt_clip Clip at `maxExtent`. Default is true.
  */
-ol.render.canvas.ReplayGroup.prototype.replay = function(
-    context, pixelRatio, transform, viewRotation, skippedFeaturesHash) {
+ol.render.canvas.ReplayGroup.prototype.replay = function(context, pixelRatio,
+    transform, viewRotation, skippedFeaturesHash, opt_clip) {
 
   /** @type {Array.<number>} */
   var zs = Object.keys(this.replaysByZIndex_).map(Number);
-  goog.array.sort(zs);
+  zs.sort(ol.array.numberSafeCompareFunction);
 
-  // setup clipping so that the parts of over-simplified geometries are not
-  // visible outside the current extent when panning
-  var maxExtent = this.maxExtent_;
-  var minX = maxExtent[0];
-  var minY = maxExtent[1];
-  var maxX = maxExtent[2];
-  var maxY = maxExtent[3];
-  var flatClipCoords = [minX, minY, minX, maxY, maxX, maxY, maxX, minY];
-  ol.geom.flat.transform.transform2D(
-      flatClipCoords, 0, 8, 2, transform, flatClipCoords);
-  context.save();
-  context.beginPath();
-  context.moveTo(flatClipCoords[0], flatClipCoords[1]);
-  context.lineTo(flatClipCoords[2], flatClipCoords[3]);
-  context.lineTo(flatClipCoords[4], flatClipCoords[5]);
-  context.lineTo(flatClipCoords[6], flatClipCoords[7]);
-  context.closePath();
-  context.clip();
+  if (opt_clip !== false) {
+    // setup clipping so that the parts of over-simplified geometries are not
+    // visible outside the current extent when panning
+    var maxExtent = this.maxExtent_;
+    var minX = maxExtent[0];
+    var minY = maxExtent[1];
+    var maxX = maxExtent[2];
+    var maxY = maxExtent[3];
+    var flatClipCoords = [minX, minY, minX, maxY, maxX, maxY, maxX, minY];
+    ol.geom.flat.transform.transform2D(
+        flatClipCoords, 0, 8, 2, transform, flatClipCoords);
+    context.save();
+    context.beginPath();
+    context.moveTo(flatClipCoords[0], flatClipCoords[1]);
+    context.lineTo(flatClipCoords[2], flatClipCoords[3]);
+    context.lineTo(flatClipCoords[4], flatClipCoords[5]);
+    context.lineTo(flatClipCoords[6], flatClipCoords[7]);
+    context.closePath();
+    context.clip();
+  }
 
   var i, ii, j, jj, replays, replay;
   for (i = 0, ii = zs.length; i < ii; ++i) {
@@ -1999,7 +2047,8 @@ ol.render.canvas.ReplayGroup.prototype.replay = function(
  * @param {number} viewRotation View rotation.
  * @param {Object.<string, boolean>} skippedFeaturesHash Ids of features
  *     to skip.
- * @param {function(ol.Feature): T} featureCallback Feature callback.
+ * @param {function((ol.Feature|ol.render.Feature)): T} featureCallback
+ *     Feature callback.
  * @param {ol.Extent=} opt_hitExtent Only check features that intersect this
  *     extent.
  * @return {T|undefined} Callback result.
@@ -2010,7 +2059,9 @@ ol.render.canvas.ReplayGroup.prototype.replayHitDetection_ = function(
     featureCallback, opt_hitExtent) {
   /** @type {Array.<number>} */
   var zs = Object.keys(this.replaysByZIndex_).map(Number);
-  goog.array.sort(zs, function(a, b) { return b - a; });
+  zs.sort(function(a, b) {
+    return b - a;
+  });
 
   var i, ii, j, replays, replay, result;
   for (i = 0, ii = zs.length; i < ii; ++i) {
