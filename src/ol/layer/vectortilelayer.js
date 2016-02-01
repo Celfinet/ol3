@@ -13,7 +13,6 @@ ol.layer.VectorTileProperty = {
 };
 
 
-
 /**
  * @classdesc
  * Layer for vector tile data that is rendered client-side.
@@ -55,15 +54,6 @@ ol.layer.VectorTile.prototype.getPreload = function() {
 
 
 /**
- * Return the associated {@link ol.source.VectorTile source} of the layer.
- * @function
- * @return {ol.source.VectorTile} Source.
- * @api
- */
-ol.layer.VectorTile.prototype.getSource;
-
-
-/**
  * Whether we use interim tiles on error.
  * @return {boolean} Use interim tiles on error.
  * @observable
@@ -92,8 +82,7 @@ ol.layer.VectorTile.prototype.setPreload = function(preload) {
  * @observable
  * @api
  */
-ol.layer.VectorTile.prototype.setUseInterimTilesOnError =
-    function(useInterimTilesOnError) {
+ol.layer.VectorTile.prototype.setUseInterimTilesOnError = function(useInterimTilesOnError) {
   this.set(
       ol.layer.TileProperty.USE_INTERIM_TILES_ON_ERROR, useInterimTilesOnError);
 };

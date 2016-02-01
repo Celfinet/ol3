@@ -6,7 +6,7 @@
 var path = require('path');
 var spawn = require('child_process').spawn;
 
-var phantomjs = require('phantomjs');
+var phantomjs = require('phantomjs-prebuilt');
 
 var serve = require('./serve');
 
@@ -64,7 +64,7 @@ function runTests(includeCoverage, callback) {
       ];
       var config = {
         ignoreResourceErrors: true,
-        useColors: true,
+        useColors: true
       };
 
       if (includeCoverage) {
@@ -82,7 +82,7 @@ function runTests(includeCoverage, callback) {
 }
 
 if (require.main === module) {
-  runTests(false, function(code){
+  runTests(false, function(code) {
     process.exit(code);
   });
 }

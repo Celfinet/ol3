@@ -59,7 +59,6 @@ goog.require('ol.renderer.dom.Map');
 goog.require('ol.renderer.webgl.Map');
 goog.require('ol.size');
 goog.require('ol.structs.PriorityQueue');
-goog.require('ol.tilecoord');
 goog.require('ol.vec.Mat4');
 
 
@@ -118,7 +117,6 @@ ol.MapProperty = {
   TARGET: 'target',
   VIEW: 'view'
 };
-
 
 
 /**
@@ -394,8 +392,8 @@ ol.Map = function(options) {
    * @type {ol.TileQueue}
    */
   this.tileQueue_ = new ol.TileQueue(
-      goog.bind(this.getTilePriority, this),
-      goog.bind(this.handleTileChange_, this));
+      this.getTilePriority.bind(this),
+      this.handleTileChange_.bind(this));
 
   /**
    * Uids of features to skip at rendering time.
@@ -616,8 +614,7 @@ ol.Map.prototype.disposeInternal = function() {
  * @template S,T,U
  * @api stable
  */
-ol.Map.prototype.forEachFeatureAtPixel =
-    function(pixel, callback, opt_this, opt_layerFilter, opt_this2) {
+ol.Map.prototype.forEachFeatureAtPixel = function(pixel, callback, opt_this, opt_layerFilter, opt_this2) {
   if (!this.frameState_) {
     return;
   }
@@ -654,8 +651,7 @@ ol.Map.prototype.forEachFeatureAtPixel =
  * @template S,T,U
  * @api stable
  */
-ol.Map.prototype.forEachLayerAtPixel =
-    function(pixel, callback, opt_this, opt_layerFilter, opt_this2) {
+ol.Map.prototype.forEachLayerAtPixel = function(pixel, callback, opt_this, opt_layerFilter, opt_this2) {
   if (!this.frameState_) {
     return;
   }
@@ -684,8 +680,7 @@ ol.Map.prototype.forEachLayerAtPixel =
  * @template U
  * @api
  */
-ol.Map.prototype.hasFeatureAtPixel =
-    function(pixel, opt_layerFilter, opt_this) {
+ol.Map.prototype.hasFeatureAtPixel = function(pixel, opt_layerFilter, opt_this) {
   if (!this.frameState_) {
     return false;
   }
@@ -929,15 +924,14 @@ ol.Map.prototype.getOverlayContainerStopEvent = function() {
  * @param {number} tileResolution Tile resolution.
  * @return {number} Tile priority.
  */
-ol.Map.prototype.getTilePriority =
-    function(tile, tileSourceKey, tileCenter, tileResolution) {
+ol.Map.prototype.getTilePriority = function(tile, tileSourceKey, tileCenter, tileResolution) {
   // Filter out tiles at higher zoom levels than the current zoom level, or that
   // are outside the visible extent.
   var frameState = this.frameState_;
   if (!frameState || !(tileSourceKey in frameState.wantedTiles)) {
     return ol.structs.PriorityQueue.DROP;
   }
-  var coordKey = ol.tilecoord.toString(tile.tileCoord);
+  var coordKey = tile.tileCoord.toString();
   if (!frameState.wantedTiles[tileSourceKey][coordKey]) {
     return ol.structs.PriorityQueue.DROP;
   }
