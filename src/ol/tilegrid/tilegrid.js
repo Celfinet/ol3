@@ -1,8 +1,6 @@
 goog.provide('ol.tilegrid.TileGrid');
 
-goog.require('goog.array');
 goog.require('goog.asserts');
-goog.require('goog.object');
 goog.require('ol');
 goog.require('ol.Coordinate');
 goog.require('ol.TileCoord');
@@ -11,6 +9,7 @@ goog.require('ol.array');
 goog.require('ol.extent');
 goog.require('ol.extent.Corner');
 goog.require('ol.math');
+goog.require('ol.object');
 goog.require('ol.proj');
 goog.require('ol.proj.METERS_PER_UNIT');
 goog.require('ol.proj.Projection');
@@ -42,7 +41,7 @@ ol.tilegrid.TileGrid = function(options) {
    * @type {!Array.<number>}
    */
   this.resolutions_ = options.resolutions;
-  goog.asserts.assert(goog.array.isSorted(this.resolutions_, function(a, b) {
+  goog.asserts.assert(ol.array.isSorted(this.resolutions_, function(a, b) {
     return b - a;
   }, true), 'resolutions must be sorted in descending order');
 
@@ -117,6 +116,12 @@ ol.tilegrid.TileGrid = function(options) {
    */
   this.fullTileRanges_ = null;
 
+  /**
+   * @private
+   * @type {ol.Size}
+   */
+  this.tmpSize_ = [0, 0];
+
   if (options.sizes !== undefined) {
     goog.asserts.assert(options.sizes.length == this.resolutions_.length,
         'number of sizes and resolutions must be equal');
@@ -136,12 +141,6 @@ ol.tilegrid.TileGrid = function(options) {
   } else if (extent) {
     this.calculateTileRanges_(extent);
   }
-
-  /**
-   * @private
-   * @type {ol.Size}
-   */
-  this.tmpSize_ = [0, 0];
 
 };
 
@@ -473,10 +472,15 @@ ol.tilegrid.TileGrid.prototype.getFullTileRange = function(z) {
 
 /**
  * @param {number} resolution Resolution.
+ * @param {number=} opt_direction If 0, the nearest resolution will be used.
+ *     If 1, the nearest lower resolution will be used. If -1, the nearest
+ *     higher resolution will be used. Default is 0.
  * @return {number} Z.
  */
-ol.tilegrid.TileGrid.prototype.getZForResolution = function(resolution) {
-  var z = ol.array.linearFindNearest(this.resolutions_, resolution, 0);
+ol.tilegrid.TileGrid.prototype.getZForResolution = function(
+    resolution, opt_direction) {
+  var z = ol.array.linearFindNearest(this.resolutions_, resolution,
+      opt_direction || 0);
   return ol.math.clamp(z, this.minZoom, this.maxZoom);
 };
 
@@ -543,7 +547,7 @@ ol.tilegrid.createForExtent = function(extent, opt_maxZoom, opt_tileSize, opt_co
  */
 ol.tilegrid.createXYZ = function(opt_options) {
   var options = /** @type {olx.tilegrid.TileGridOptions} */ ({});
-  goog.object.extend(options, opt_options !== undefined ?
+  ol.object.assign(options, opt_options !== undefined ?
       opt_options : /** @type {olx.tilegrid.XYZOptions} */ ({}));
   if (options.extent === undefined) {
     options.extent = ol.proj.get('EPSG:3857').getExtent();
