@@ -1,8 +1,9 @@
 goog.provide('ol.interaction.Translate');
 goog.provide('ol.interaction.TranslateEvent');
 
-goog.require('goog.events');
-goog.require('goog.events.Event');
+goog.require('goog.asserts');
+goog.require('ol.events');
+goog.require('ol.events.Event');
 goog.require('ol.array');
 goog.require('ol.interaction.Pointer');
 
@@ -38,7 +39,7 @@ ol.interaction.TranslateEventType = {
  * this type.
  *
  * @constructor
- * @extends {goog.events.Event}
+ * @extends {ol.events.Event}
  * @implements {oli.interaction.TranslateEvent}
  * @param {ol.interaction.TranslateEventType} type Type.
  * @param {ol.Collection.<ol.Feature>} features The features translated.
@@ -63,7 +64,7 @@ ol.interaction.TranslateEvent = function(type, features, coordinate) {
    */
   this.coordinate = coordinate;
 };
-goog.inherits(ol.interaction.TranslateEvent, goog.events.Event);
+goog.inherits(ol.interaction.TranslateEvent, ol.events.Event);
 
 
 /**
@@ -105,6 +106,37 @@ ol.interaction.Translate = function(options) {
    * @private
    */
   this.features_ = options.features !== undefined ? options.features : null;
+
+  var layerFilter;
+  if (options.layers) {
+    if (goog.isFunction(options.layers)) {
+      /**
+       * @param {ol.layer.Layer} layer Layer.
+       * @return {boolean} Include.
+       */
+      layerFilter = function(layer) {
+        goog.asserts.assertFunction(options.layers);
+        return options.layers(layer);
+      };
+    } else {
+      var layers = options.layers;
+      /**
+       * @param {ol.layer.Layer} layer Layer.
+       * @return {boolean} Include.
+       */
+      layerFilter = function(layer) {
+        return ol.array.includes(layers, layer);
+      };
+    }
+  } else {
+    layerFilter = ol.functions.TRUE;
+  }
+
+  /**
+   * @private
+   * @type {function(ol.layer.Layer): boolean}
+   */
+  this.layerFilter_ = layerFilter;
 
   /**
    * @type {ol.Feature}
@@ -242,7 +274,7 @@ ol.interaction.Translate.prototype.featuresAtPixel_ = function(pixel, map) {
   var intersectingFeature = map.forEachFeatureAtPixel(pixel,
       function(feature) {
         return feature;
-      });
+      }, this, this.layerFilter_);
 
   if (this.features_ &&
       ol.array.includes(this.features_.getArray(), intersectingFeature)) {

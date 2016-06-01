@@ -1,12 +1,11 @@
 goog.provide('ol.source.TileImage');
 
 goog.require('goog.asserts');
-goog.require('goog.events');
-goog.require('goog.events.EventType');
-goog.require('goog.object');
 goog.require('ol.ImageTile');
 goog.require('ol.TileCache');
 goog.require('ol.TileState');
+goog.require('ol.events');
+goog.require('ol.events.EventType');
 goog.require('ol.proj');
 goog.require('ol.reproj.Tile');
 goog.require('ol.source.UrlTile');
@@ -26,6 +25,7 @@ ol.source.TileImage = function(options) {
 
   goog.base(this, {
     attributions: options.attributions,
+    cacheSize: options.cacheSize,
     extent: options.extent,
     logo: options.logo,
     opaque: options.opaque,
@@ -90,14 +90,16 @@ ol.source.TileImage.prototype.canExpireCache = function() {
   if (!ol.ENABLE_RASTER_REPROJECTION) {
     return goog.base(this, 'canExpireCache');
   }
-  var canExpire = this.tileCache.canExpireCache();
-  if (canExpire) {
+  if (this.tileCache.canExpireCache()) {
     return true;
   } else {
-    return goog.object.some(this.tileCacheForProjection, function(tileCache) {
-      return tileCache.canExpireCache();
-    });
+    for (var key in this.tileCacheForProjection) {
+      if (this.tileCacheForProjection[key].canExpireCache()) {
+        return true;
+      }
+    }
   }
+  return false;
 };
 
 
@@ -112,9 +114,33 @@ ol.source.TileImage.prototype.expireCache = function(projection, usedTiles) {
   var usedTileCache = this.getTileCacheForProjection(projection);
 
   this.tileCache.expireCache(this.tileCache == usedTileCache ? usedTiles : {});
-  goog.object.forEach(this.tileCacheForProjection, function(tileCache) {
+  for (var id in this.tileCacheForProjection) {
+    var tileCache = this.tileCacheForProjection[id];
     tileCache.expireCache(tileCache == usedTileCache ? usedTiles : {});
-  });
+  }
+};
+
+
+/**
+ * @inheritDoc
+ */
+ol.source.TileImage.prototype.getGutter = function(projection) {
+  if (ol.ENABLE_RASTER_REPROJECTION &&
+      this.getProjection() && projection &&
+      !ol.proj.equivalent(this.getProjection(), projection)) {
+    return 0;
+  } else {
+    return this.getGutterInternal();
+  }
+};
+
+
+/**
+ * @protected
+ * @return {number} Gutter.
+ */
+ol.source.TileImage.prototype.getGutterInternal = function() {
+  return 0;
 };
 
 
@@ -197,8 +223,8 @@ ol.source.TileImage.prototype.createTile_ = function(z, x, y, pixelRatio, projec
       this.crossOrigin,
       this.tileLoadFunction);
   tile.key = key;
-  goog.events.listen(tile, goog.events.EventType.CHANGE,
-      this.handleTileChange, false, this);
+  ol.events.listen(tile, ol.events.EventType.CHANGE,
+      this.handleTileChange, this);
   return tile;
 };
 
@@ -228,6 +254,7 @@ ol.source.TileImage.prototype.getTile = function(z, x, y, pixelRatio, projection
           sourceProjection, sourceTileGrid,
           projection, targetTileGrid,
           tileCoord, wrappedTileCoord, this.getTilePixelRatio(pixelRatio),
+          this.getGutterInternal(),
           function(z, x, y, pixelRatio) {
             return this.getTileInternal(z, x, y, pixelRatio, sourceProjection);
           }.bind(this), this.reprojectionErrorThreshold_,
@@ -252,19 +279,19 @@ ol.source.TileImage.prototype.getTile = function(z, x, y, pixelRatio, projection
 ol.source.TileImage.prototype.getTileInternal = function(z, x, y, pixelRatio, projection) {
   var /** @type {ol.Tile} */ tile = null;
   var tileCoordKey = this.getKeyZXY(z, x, y);
-  var paramsKey = this.getKeyParams();
+  var key = this.getKey();
   if (!this.tileCache.containsKey(tileCoordKey)) {
     goog.asserts.assert(projection, 'argument projection is truthy');
-    tile = this.createTile_(z, x, y, pixelRatio, projection, paramsKey);
+    tile = this.createTile_(z, x, y, pixelRatio, projection, key);
     this.tileCache.set(tileCoordKey, tile);
   } else {
     tile = /** @type {!ol.Tile} */ (this.tileCache.get(tileCoordKey));
-    if (tile.key != paramsKey) {
+    if (tile.key != key) {
       // The source's params changed. If the tile has an interim tile and if we
       // can use it then we use it. Otherwise we create a new tile.  In both
       // cases we attempt to assign an interim tile to the new tile.
       var /** @type {ol.Tile} */ interimTile = tile;
-      if (tile.interimTile && tile.interimTile.key == paramsKey) {
+      if (tile.interimTile && tile.interimTile.key == key) {
         goog.asserts.assert(tile.interimTile.getState() == ol.TileState.LOADED);
         goog.asserts.assert(tile.interimTile.interimTile === null);
         tile = tile.interimTile;
@@ -272,7 +299,7 @@ ol.source.TileImage.prototype.getTileInternal = function(z, x, y, pixelRatio, pr
           tile.interimTile = interimTile;
         }
       } else {
-        tile = this.createTile_(z, x, y, pixelRatio, projection, paramsKey);
+        tile = this.createTile_(z, x, y, pixelRatio, projection, key);
         if (interimTile.getState() == ol.TileState.LOADED) {
           tile.interimTile = interimTile;
         } else if (interimTile.interimTile &&
@@ -303,9 +330,9 @@ ol.source.TileImage.prototype.setRenderReprojectionEdges = function(render) {
     return;
   }
   this.renderReprojectionEdges_ = render;
-  goog.object.forEach(this.tileCacheForProjection, function(tileCache) {
-    tileCache.clear();
-  });
+  for (var id in this.tileCacheForProjection) {
+    this.tileCacheForProjection[id].clear();
+  }
   this.changed();
 };
 

@@ -1,24 +1,16 @@
 goog.provide('ol.reproj.Tile');
-goog.provide('ol.reproj.TileFunctionType');
 
 goog.require('goog.asserts');
-goog.require('goog.events');
-goog.require('goog.events.EventType');
-goog.require('goog.math');
-goog.require('goog.object');
 goog.require('ol.Tile');
 goog.require('ol.TileState');
+goog.require('ol.events');
+goog.require('ol.events.EventType');
 goog.require('ol.extent');
 goog.require('ol.math');
+goog.require('ol.object');
 goog.require('ol.proj');
 goog.require('ol.reproj');
 goog.require('ol.reproj.Triangulation');
-
-
-/**
- * @typedef {function(number, number, number, number) : ol.Tile}
- */
-ol.reproj.TileFunctionType;
 
 
 /**
@@ -35,14 +27,15 @@ ol.reproj.TileFunctionType;
  * @param {ol.TileCoord} tileCoord Coordinate of the tile.
  * @param {ol.TileCoord} wrappedTileCoord Coordinate of the tile wrapped in X.
  * @param {number} pixelRatio Pixel ratio.
- * @param {ol.reproj.TileFunctionType} getTileFunction
+ * @param {number} gutter Gutter of the source tiles.
+ * @param {ol.ReprojTileFunctionType} getTileFunction
  *     Function returning source tiles (z, x, y, pixelRatio).
  * @param {number=} opt_errorThreshold Acceptable reprojection error (in px).
  * @param {boolean=} opt_renderEdges Render reprojection edges.
  */
 ol.reproj.Tile = function(sourceProj, sourceTileGrid,
     targetProj, targetTileGrid, tileCoord, wrappedTileCoord,
-    pixelRatio, getTileFunction,
+    pixelRatio, gutter, getTileFunction,
     opt_errorThreshold,
     opt_renderEdges) {
   goog.base(this, tileCoord, ol.TileState.IDLE);
@@ -58,6 +51,12 @@ ol.reproj.Tile = function(sourceProj, sourceTileGrid,
    * @type {number}
    */
   this.pixelRatio_ = pixelRatio;
+
+  /**
+   * @private
+   * @type {number}
+   */
+  this.gutter_ = gutter;
 
   /**
    * @private
@@ -97,7 +96,7 @@ ol.reproj.Tile = function(sourceProj, sourceTileGrid,
 
   /**
    * @private
-   * @type {Array.<goog.events.Key>}
+   * @type {Array.<ol.events.Key>}
    */
   this.sourcesListenerKeys_ = null;
 
@@ -138,7 +137,7 @@ ol.reproj.Tile = function(sourceProj, sourceTileGrid,
   var sourceResolution = ol.reproj.calculateSourceResolution(
       sourceProj, targetProj, targetCenter, targetResolution);
 
-  if (!goog.math.isFiniteNumber(sourceResolution) || sourceResolution <= 0) {
+  if (!isFinite(sourceResolution) || sourceResolution <= 0) {
     // invalid sourceResolution -> EMPTY
     // probably edges of the projections when no extent is defined
     this.state = ol.TileState.EMPTY;
@@ -226,7 +225,7 @@ ol.reproj.Tile.prototype.getImage = function(opt_context) {
     var key = goog.getUid(opt_context);
     if (key in this.canvasByContext_) {
       return this.canvasByContext_[key];
-    } else if (goog.object.isEmpty(this.canvasByContext_)) {
+    } else if (ol.object.isEmpty(this.canvasByContext_)) {
       image = this.canvas_;
     } else {
       image = /** @type {HTMLCanvasElement} */ (this.canvas_.cloneNode(false));
@@ -269,7 +268,7 @@ ol.reproj.Tile.prototype.reproject_ = function() {
     this.canvas_ = ol.reproj.render(width, height, this.pixelRatio_,
         sourceResolution, this.sourceTileGrid_.getExtent(),
         targetResolution, targetExtent, this.triangulation_, sources,
-        this.renderEdges_);
+        this.gutter_, this.renderEdges_);
 
     this.state = ol.TileState.LOADED;
   }
@@ -297,13 +296,13 @@ ol.reproj.Tile.prototype.load = function() {
         leftToLoad++;
 
         var sourceListenKey;
-        sourceListenKey = tile.listen(goog.events.EventType.CHANGE,
+        sourceListenKey = ol.events.listen(tile, ol.events.EventType.CHANGE,
             function(e) {
               var state = tile.getState();
               if (state == ol.TileState.LOADED ||
                   state == ol.TileState.ERROR ||
                   state == ol.TileState.EMPTY) {
-                goog.events.unlistenByKey(sourceListenKey);
+                ol.events.unlistenByKey(sourceListenKey);
                 leftToLoad--;
                 goog.asserts.assert(leftToLoad >= 0,
                     'leftToLoad should not be negative');
@@ -312,7 +311,7 @@ ol.reproj.Tile.prototype.load = function() {
                   this.reproject_();
                 }
               }
-            }, false, this);
+            }, this);
         this.sourcesListenerKeys_.push(sourceListenKey);
       }
     }, this);
@@ -325,7 +324,7 @@ ol.reproj.Tile.prototype.load = function() {
     });
 
     if (leftToLoad === 0) {
-      goog.global.setTimeout(this.reproject_.bind(this), 0);
+      ol.global.setTimeout(this.reproject_.bind(this), 0);
     }
   }
 };
@@ -337,6 +336,6 @@ ol.reproj.Tile.prototype.load = function() {
 ol.reproj.Tile.prototype.unlistenSources_ = function() {
   goog.asserts.assert(this.sourcesListenerKeys_,
       'this.sourcesListenerKeys_ should not be null');
-  this.sourcesListenerKeys_.forEach(goog.events.unlistenByKey);
+  this.sourcesListenerKeys_.forEach(ol.events.unlistenByKey);
   this.sourcesListenerKeys_ = null;
 };

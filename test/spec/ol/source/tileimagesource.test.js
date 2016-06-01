@@ -8,7 +8,7 @@ describe('ol.source.TileImage', function() {
       tileGrid: opt_tileGrid ||
           ol.tilegrid.createForProjection(proj, undefined, [2, 2]),
       tileUrlFunction: ol.TileUrlFunction.createFromTemplate(
-          'data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA=')
+          'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACwAAAAAAQABAAACAkQBADs=')
     });
   }
 
@@ -27,7 +27,7 @@ describe('ol.source.TileImage', function() {
 
     beforeEach(function() {
       source = createSource();
-      expect(source.getKeyParams()).to.be('');
+      expect(source.getKey()).to.be('');
       source.getTileInternal(0, 0, -1, 1, ol.proj.get('EPSG:3857'));
       expect(source.tileCache.getCount()).to.be(1);
       tile = source.tileCache.get(source.getKeyZXY(0, 0, -1));
@@ -43,7 +43,7 @@ describe('ol.source.TileImage', function() {
 
       describe('tile is not loaded', function() {
         it('returns a tile with no interim tile', function() {
-          source.getKeyParams = function() {
+          source.getKey = function() {
             return 'key0';
           };
           var returnedTile = source.getTileInternal(
@@ -56,7 +56,7 @@ describe('ol.source.TileImage', function() {
 
       describe('tile is loaded', function() {
         it('returns a tile with interim tile', function() {
-          source.getKeyParams = function() {
+          source.getKey = function() {
             return 'key0';
           };
           tile.state = ol.TileState.LOADED;
@@ -71,7 +71,7 @@ describe('ol.source.TileImage', function() {
       describe('tile is not loaded but interim tile is', function() {
         it('returns a tile with interim tile', function() {
           var dynamicParamsKey, returnedTile;
-          source.getKeyParams = function() {
+          source.getKey = function() {
             return dynamicParamsKey;
           };
           dynamicParamsKey = 'key0';
@@ -124,7 +124,7 @@ describe('ol.source.TileImage', function() {
       var tile = source.getTile(0, 0, -1, 1, ol.proj.get('EPSG:3857'));
       expect(tile).to.be.a(ol.reproj.Tile);
 
-      tile.listen('change', function() {
+      ol.events.listen(tile, 'change', function() {
         if (tile.getState() == ol.TileState.LOADED) {
           done();
         }
@@ -143,7 +143,7 @@ describe('ol.source.TileImage', function() {
       var tile = source.getTile(0, 0, -1, 1, proj);
       expect(tile).to.be.a(ol.reproj.Tile);
 
-      tile.listen('change', function() {
+      ol.events.listen(tile, 'change', function() {
         if (tile.getState() == ol.TileState.LOADED) {
           done();
         }
@@ -157,6 +157,7 @@ goog.require('ol.ImageTile');
 goog.require('ol.Tile');
 goog.require('ol.TileState');
 goog.require('ol.TileUrlFunction');
+goog.require('ol.events');
 goog.require('ol.proj');
 goog.require('ol.proj.Projection');
 goog.require('ol.reproj.Tile');

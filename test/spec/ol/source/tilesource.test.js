@@ -12,6 +12,47 @@ describe('ol.source.Tile', function() {
     });
   });
 
+  describe('#setKey()', function() {
+    it('sets the source key', function() {
+      var source = new ol.source.Tile({});
+      expect(source.getKey()).to.equal('');
+
+      var key = 'foo';
+      source.setKey(key);
+      expect(source.getKey()).to.equal(key);
+    });
+  });
+
+  describe('#setKey()', function() {
+    it('dispatches a change event', function(done) {
+      var source = new ol.source.Tile({});
+
+      var key = 'foo';
+      source.once('change', function() {
+        done();
+      });
+      source.setKey(key);
+    });
+
+    it('does not dispatch change if key does not change', function(done) {
+      var source = new ol.source.Tile({});
+
+      var key = 'foo';
+      source.once('change', function() {
+        source.once('change', function() {
+          done(new Error('Unexpected change event after source.setKey()'));
+        });
+        setTimeout(function() {
+          done();
+        }, 10);
+        source.setKey(key); // this should not result in a change event
+      });
+
+      source.setKey(key); // this should result in a change event
+    });
+
+  });
+
   describe('#forEachLoadedTile()', function() {
 
     var callback;
@@ -170,6 +211,24 @@ describe('ol.source.Tile', function() {
     });
   });
 
+  describe('#refresh()', function() {
+    it('checks clearing of internal state', function() {
+      // create a source with one loaded tile
+      var source = new ol.test.source.TileMock({
+        '1/0/0': ol.TileState.LOADED
+      });
+      // check the loaded tile is there
+      var tile = source.getTile(1, 0, 0);
+      expect(tile).to.be.a(ol.Tile);
+      // check tile cache is filled
+      expect(source.tileCache.getCount()).to.eql(1);
+      // refresh the source
+      source.refresh();
+      // check tile cache after refresh (should be empty)
+      expect(source.tileCache.getCount()).to.eql(0);
+    });
+  });
+
 });
 
 
@@ -255,7 +314,6 @@ describe('ol.test.source.TileMock', function() {
 
 });
 
-goog.require('goog.object');
 goog.require('ol.Tile');
 goog.require('ol.TileRange');
 goog.require('ol.TileState');

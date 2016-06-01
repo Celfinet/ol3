@@ -279,7 +279,7 @@ ol.format.GPX.FEATURE_READER_ = {
 
 /**
  * @const
- * @type {Object.<string, Object.<string, ol.xml.Parser>>}
+ * @type {Object.<string, Object.<string, ol.XmlParser>>}
  * @private
  */
 ol.format.GPX.GPX_PARSERS_ = ol.xml.makeStructureNS(
@@ -292,7 +292,7 @@ ol.format.GPX.GPX_PARSERS_ = ol.xml.makeStructureNS(
 
 /**
  * @const
- * @type {Object.<string, Object.<string, ol.xml.Parser>>}
+ * @type {Object.<string, Object.<string, ol.XmlParser>>}
  * @private
  */
 ol.format.GPX.LINK_PARSERS_ = ol.xml.makeStructureNS(
@@ -306,7 +306,7 @@ ol.format.GPX.LINK_PARSERS_ = ol.xml.makeStructureNS(
 
 /**
  * @const
- * @type {Object.<string, Object.<string, ol.xml.Parser>>}
+ * @type {Object.<string, Object.<string, ol.XmlParser>>}
  * @private
  */
 ol.format.GPX.RTE_PARSERS_ = ol.xml.makeStructureNS(
@@ -326,7 +326,7 @@ ol.format.GPX.RTE_PARSERS_ = ol.xml.makeStructureNS(
 
 /**
  * @const
- * @type {Object.<string, Object.<string, ol.xml.Parser>>}
+ * @type {Object.<string, Object.<string, ol.XmlParser>>}
  * @private
  */
 ol.format.GPX.RTEPT_PARSERS_ = ol.xml.makeStructureNS(
@@ -338,7 +338,7 @@ ol.format.GPX.RTEPT_PARSERS_ = ol.xml.makeStructureNS(
 
 /**
  * @const
- * @type {Object.<string, Object.<string, ol.xml.Parser>>}
+ * @type {Object.<string, Object.<string, ol.XmlParser>>}
  * @private
  */
 ol.format.GPX.TRK_PARSERS_ = ol.xml.makeStructureNS(
@@ -358,7 +358,7 @@ ol.format.GPX.TRK_PARSERS_ = ol.xml.makeStructureNS(
 
 /**
  * @const
- * @type {Object.<string, Object.<string, ol.xml.Parser>>}
+ * @type {Object.<string, Object.<string, ol.XmlParser>>}
  * @private
  */
 ol.format.GPX.TRKSEG_PARSERS_ = ol.xml.makeStructureNS(
@@ -369,7 +369,7 @@ ol.format.GPX.TRKSEG_PARSERS_ = ol.xml.makeStructureNS(
 
 /**
  * @const
- * @type {Object.<string, Object.<string, ol.xml.Parser>>}
+ * @type {Object.<string, Object.<string, ol.XmlParser>>}
  * @private
  */
 ol.format.GPX.TRKPT_PARSERS_ = ol.xml.makeStructureNS(
@@ -381,7 +381,7 @@ ol.format.GPX.TRKPT_PARSERS_ = ol.xml.makeStructureNS(
 
 /**
  * @const
- * @type {Object.<string, Object.<string, ol.xml.Parser>>}
+ * @type {Object.<string, Object.<string, ol.XmlParser>>}
  * @private
  */
 ol.format.GPX.WPT_PARSERS_ = ol.xml.makeStructureNS(
@@ -486,8 +486,8 @@ ol.format.GPX.prototype.readFeaturesFromNode = function(node, opt_options) {
     return [];
   }
   if (node.localName == 'gpx') {
-    var features = ol.xml.pushParseAndPop(
-        /** @type {Array.<ol.Feature>} */ ([]), ol.format.GPX.GPX_PARSERS_,
+    /** @type {Array.<ol.Feature>} */
+    var features = ol.xml.pushParseAndPop([], ol.format.GPX.GPX_PARSERS_,
         node, [this.getReadOptions(node, opt_options)]);
     if (features) {
       this.handleReadExtensions_(features);
@@ -526,7 +526,7 @@ ol.format.GPX.writeLink_ = function(node, value, objectStack) {
     properties['linkText'],
     properties['linkType']
   ];
-  ol.xml.pushSerializeAndPop(/** @type {ol.xml.NodeStackItem} */ ({node: node}),
+  ol.xml.pushSerializeAndPop(/** @type {ol.XmlNodeStackItem} */ ({node: node}),
       ol.format.GPX.LINK_SERIALIZERS_, ol.xml.OBJECT_PROPERTY_NODE_FACTORY,
       link, objectStack, ol.format.GPX.LINK_SEQUENCE_);
 };
@@ -571,7 +571,7 @@ ol.format.GPX.writeWptType_ = function(node, coordinate, objectStack) {
   }
   var orderedKeys = ol.format.GPX.WPT_TYPE_SEQUENCE_[namespaceURI];
   var values = ol.xml.makeSequence(properties, orderedKeys);
-  ol.xml.pushSerializeAndPop(/** @type {ol.xml.NodeStackItem} */
+  ol.xml.pushSerializeAndPop(/** @type {ol.XmlNodeStackItem} */
       ({node: node, 'properties': properties}),
       ol.format.GPX.WPT_TYPE_SERIALIZERS_, ol.xml.OBJECT_PROPERTY_NODE_FACTORY,
       values, objectStack, orderedKeys);
@@ -600,7 +600,7 @@ ol.format.GPX.writeRte_ = function(node, feature, objectStack) {
   var parentNode = objectStack[objectStack.length - 1].node;
   var orderedKeys = ol.format.GPX.RTE_SEQUENCE_[parentNode.namespaceURI];
   var values = ol.xml.makeSequence(properties, orderedKeys);
-  ol.xml.pushSerializeAndPop(/** @type {ol.xml.NodeStackItem} */ (context),
+  ol.xml.pushSerializeAndPop(context,
       ol.format.GPX.RTE_SERIALIZERS_, ol.xml.OBJECT_PROPERTY_NODE_FACTORY,
       values, objectStack, orderedKeys);
 };
@@ -615,6 +615,7 @@ ol.format.GPX.writeRte_ = function(node, feature, objectStack) {
 ol.format.GPX.writeTrk_ = function(node, feature, objectStack) {
   var options = /** @type {olx.format.WriteOptions} */ (objectStack[0]);
   var properties = feature.getProperties();
+  /** @type {ol.XmlNodeStackItem} */
   var context = {node: node, 'properties': properties};
   var geometry = feature.getGeometry();
   if (geometry) {
@@ -627,7 +628,7 @@ ol.format.GPX.writeTrk_ = function(node, feature, objectStack) {
   var parentNode = objectStack[objectStack.length - 1].node;
   var orderedKeys = ol.format.GPX.TRK_SEQUENCE_[parentNode.namespaceURI];
   var values = ol.xml.makeSequence(properties, orderedKeys);
-  ol.xml.pushSerializeAndPop(/** @type {ol.xml.NodeStackItem} */ (context),
+  ol.xml.pushSerializeAndPop(context,
       ol.format.GPX.TRK_SERIALIZERS_, ol.xml.OBJECT_PROPERTY_NODE_FACTORY,
       values, objectStack, orderedKeys);
 };
@@ -640,9 +641,10 @@ ol.format.GPX.writeTrk_ = function(node, feature, objectStack) {
  * @private
  */
 ol.format.GPX.writeTrkSeg_ = function(node, lineString, objectStack) {
+  /** @type {ol.XmlNodeStackItem} */
   var context = {node: node, 'geometryLayout': lineString.getLayout(),
     'properties': {}};
-  ol.xml.pushSerializeAndPop(/** @type {ol.xml.NodeStackItem} */ (context),
+  ol.xml.pushSerializeAndPop(context,
       ol.format.GPX.TRKSEG_SERIALIZERS_, ol.format.GPX.TRKSEG_NODE_FACTORY_,
       lineString.getCoordinates(), objectStack);
 };
@@ -680,7 +682,7 @@ ol.format.GPX.LINK_SEQUENCE_ = ['text', 'type'];
 
 
 /**
- * @type {Object.<string, Object.<string, ol.xml.Serializer>>}
+ * @type {Object.<string, Object.<string, ol.XmlSerializer>>}
  * @private
  */
 ol.format.GPX.LINK_SERIALIZERS_ = ol.xml.makeStructureNS(
@@ -703,7 +705,7 @@ ol.format.GPX.RTE_SEQUENCE_ = ol.xml.makeStructureNS(
 
 /**
  * @const
- * @type {Object.<string, Object.<string, ol.xml.Serializer>>}
+ * @type {Object.<string, Object.<string, ol.XmlSerializer>>}
  * @private
  */
 ol.format.GPX.RTE_SERIALIZERS_ = ol.xml.makeStructureNS(
@@ -734,7 +736,7 @@ ol.format.GPX.TRK_SEQUENCE_ = ol.xml.makeStructureNS(
 
 /**
  * @const
- * @type {Object.<string, Object.<string, ol.xml.Serializer>>}
+ * @type {Object.<string, Object.<string, ol.XmlSerializer>>}
  * @private
  */
 ol.format.GPX.TRK_SERIALIZERS_ = ol.xml.makeStructureNS(
@@ -762,7 +764,7 @@ ol.format.GPX.TRKSEG_NODE_FACTORY_ = ol.xml.makeSimpleNodeFactory('trkpt');
 
 /**
  * @const
- * @type {Object.<string, Object.<string, ol.xml.Serializer>>}
+ * @type {Object.<string, Object.<string, ol.XmlSerializer>>}
  * @private
  */
 ol.format.GPX.TRKSEG_SERIALIZERS_ = ol.xml.makeStructureNS(
@@ -785,7 +787,7 @@ ol.format.GPX.WPT_TYPE_SEQUENCE_ = ol.xml.makeStructureNS(
 
 
 /**
- * @type {Object.<string, Object.<string, ol.xml.Serializer>>}
+ * @type {Object.<string, Object.<string, ol.XmlSerializer>>}
  * @private
  */
 ol.format.GPX.WPT_TYPE_SERIALIZERS_ = ol.xml.makeStructureNS(
@@ -853,7 +855,7 @@ ol.format.GPX.GPX_NODE_FACTORY_ = function(value, objectStack, opt_nodeName) {
 
 /**
  * @const
- * @type {Object.<string, Object.<string, ol.xml.Serializer>>}
+ * @type {Object.<string, Object.<string, ol.XmlSerializer>>}
  * @private
  */
 ol.format.GPX.GPX_SERIALIZERS_ = ol.xml.makeStructureNS(
@@ -866,6 +868,8 @@ ol.format.GPX.GPX_SERIALIZERS_ = ol.xml.makeStructureNS(
 
 /**
  * Encode an array of features in the GPX format.
+ * LineString geometries are output as routes (`<rte>`), and MultiLineString
+ * as tracks (`<trk>`).
  *
  * @function
  * @param {Array.<ol.Feature>} features Features.
@@ -878,6 +882,8 @@ ol.format.GPX.prototype.writeFeatures;
 
 /**
  * Encode an array of features in the GPX format as an XML node.
+ * LineString geometries are output as routes (`<rte>`), and MultiLineString
+ * as tracks (`<trk>`).
  *
  * @param {Array.<ol.Feature>} features Features.
  * @param {olx.format.WriteOptions=} opt_options Options.
@@ -889,7 +895,7 @@ ol.format.GPX.prototype.writeFeaturesNode = function(features, opt_options) {
   //FIXME Serialize metadata
   var gpx = ol.xml.createElementNS('http://www.topografix.com/GPX/1/1', 'gpx');
 
-  ol.xml.pushSerializeAndPop(/** @type {ol.xml.NodeStackItem} */
+  ol.xml.pushSerializeAndPop(/** @type {ol.XmlNodeStackItem} */
       ({node: gpx}), ol.format.GPX.GPX_SERIALIZERS_,
       ol.format.GPX.GPX_NODE_FACTORY_, features, [opt_options]);
   return gpx;

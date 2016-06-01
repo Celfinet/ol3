@@ -1,18 +1,9 @@
 goog.provide('ol.reproj.Triangulation');
 
 goog.require('goog.asserts');
-goog.require('goog.math');
 goog.require('ol.extent');
+goog.require('ol.math');
 goog.require('ol.proj');
-
-
-/**
- * Single triangle; consists of 3 source points and 3 target points.
- *
- * @typedef {{source: Array.<ol.Coordinate>,
- *            target: Array.<ol.Coordinate>}}
- */
-ol.reproj.Triangle;
 
 
 /**
@@ -72,7 +63,7 @@ ol.reproj.Triangulation = function(sourceProj, targetProj, targetExtent,
   this.errorThresholdSquared_ = errorThreshold * errorThreshold;
 
   /**
-   * @type {Array.<ol.reproj.Triangle>}
+   * @type {Array.<ol.ReprojTriangle>}
    * @private
    */
   this.triangles_ = [];
@@ -262,10 +253,10 @@ ol.reproj.Triangulation.prototype.addQuad_ = function(a, b, c, d,
       if (wrapsX) {
         goog.asserts.assert(this.sourceWorldWidth_);
         var centerSrcEstimX =
-            (goog.math.modulo(aSrc[0], this.sourceWorldWidth_) +
-             goog.math.modulo(cSrc[0], this.sourceWorldWidth_)) / 2;
+            (ol.math.modulo(aSrc[0], this.sourceWorldWidth_) +
+             ol.math.modulo(cSrc[0], this.sourceWorldWidth_)) / 2;
         dx = centerSrcEstimX -
-            goog.math.modulo(centerSrc[0], this.sourceWorldWidth_);
+            ol.math.modulo(centerSrc[0], this.sourceWorldWidth_);
       } else {
         dx = (aSrc[0] + cSrc[0]) / 2 - centerSrc[0];
       }
@@ -333,7 +324,7 @@ ol.reproj.Triangulation.prototype.calculateSourceExtent = function() {
 
 
 /**
- * @return {Array.<ol.reproj.Triangle>} Array of the calculated triangles.
+ * @return {Array.<ol.ReprojTriangle>} Array of the calculated triangles.
  */
 ol.reproj.Triangulation.prototype.getTriangles = function() {
   return this.triangles_;

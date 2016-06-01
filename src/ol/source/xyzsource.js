@@ -22,10 +22,11 @@ goog.require('ol.source.TileImage');
  *
  * @constructor
  * @extends {ol.source.TileImage}
- * @param {olx.source.XYZOptions} options XYZ options.
+ * @param {olx.source.XYZOptions=} opt_options XYZ options.
  * @api stable
  */
-ol.source.XYZ = function(options) {
+ol.source.XYZ = function(opt_options) {
+  var options = opt_options || {};
   var projection = options.projection !== undefined ?
       options.projection : 'EPSG:3857';
 
@@ -33,11 +34,13 @@ ol.source.XYZ = function(options) {
       ol.tilegrid.createXYZ({
         extent: ol.tilegrid.extentFromProjection(projection),
         maxZoom: options.maxZoom,
+        minZoom: options.minZoom,
         tileSize: options.tileSize
       });
 
   goog.base(this, {
     attributions: options.attributions,
+    cacheSize: options.cacheSize,
     crossOrigin: options.crossOrigin,
     logo: options.logo,
     opaque: options.opaque,
