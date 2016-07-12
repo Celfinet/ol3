@@ -8,7 +8,7 @@ goog.require('ol.ext.pbf');
 goog.require('ol.ext.vectortile');///DOES NOT EXIST
 goog.require('ol.format.Feature');
 goog.require('ol.format.FormatType');
-goog.require('ol.geom.Geometry');ls
+goog.require('ol.geom.Geometry');
 goog.require('ol.geom.GeometryLayout');
 goog.require('ol.geom.GeometryType');
 goog.require('ol.geom.LineString');
