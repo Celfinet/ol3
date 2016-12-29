@@ -1,5 +1,7 @@
 goog.provide('ol.test.color');
 
+goog.require('ol.color');
+
 
 describe('ol.color', function() {
 
@@ -76,20 +78,53 @@ describe('ol.color', function() {
       expect(ol.color.fromString('rgb(0, 0, 255)')).to.eql([0, 0, 255, 1]);
     });
 
-    it('can parse rgba colors', function() {
-      expect(ol.color.fromString('rgba(255, 255, 0, 0.1)')).to.eql(
-          [255, 255, 0, 0.1]);
+    it('ignores whitespace before, between & after numbers (rgb)', function() {
+      expect(ol.color.fromString('rgb( \t 0  ,   0 \n , 255  )')).to.eql(
+          [0, 0, 255, 1]);
     });
 
-    if (ol.ENABLE_NAMED_COLORS) {
-      it('caches parsed values', function() {
-        var count = ol.color.fromStringInternal_.callCount;
-        ol.color.fromString('aquamarine');
-        expect(ol.color.fromStringInternal_.callCount).to.be(count + 1);
-        ol.color.fromString('aquamarine');
-        expect(ol.color.fromStringInternal_.callCount).to.be(count + 1);
-      });
-    }
+    it('can parse rgba colors', function() {
+      // opacity 0
+      expect(ol.color.fromString('rgba(255, 255, 0, 0)')).to.eql(
+          [255, 255, 0, 0]);
+      // opacity 0.0 (simple float)
+      expect(ol.color.fromString('rgba(255, 255, 0, 0.0)')).to.eql(
+          [255, 255, 0, 0]);
+      // opacity 0.0000000000000000 (float with 16 digits)
+      expect(ol.color.fromString('rgba(255, 255, 0, 0.0000000000000000)')).to.eql(
+          [255, 255, 0, 0]);
+      // opacity 0.1 (simple float)
+      expect(ol.color.fromString('rgba(255, 255, 0, 0.1)')).to.eql(
+          [255, 255, 0, 0.1]);
+      // opacity 0.1111111111111111 (float with 16 digits)
+      expect(ol.color.fromString('rgba(255, 255, 0, 0.1111111111111111)')).to.eql(
+          [255, 255, 0, 0.1111111111111111]);
+      // opacity 1
+      expect(ol.color.fromString('rgba(255, 255, 0, 1)')).to.eql(
+          [255, 255, 0, 1]);
+      // opacity 1.0
+      expect(ol.color.fromString('rgba(255, 255, 0, 1.0)')).to.eql(
+          [255, 255, 0, 1]);
+      // opacity 1.0000000000000000
+      expect(ol.color.fromString('rgba(255, 255, 0, 1.0000000000000000)')).to.eql(
+          [255, 255, 0, 1]);
+      // with 30 decimal digits
+      expect(ol.color.fromString('rgba(255, 255, 0, 0.123456789012345678901234567890)')).to.eql(
+          [255, 255, 0, 0.123456789012345678901234567890]);
+    });
+
+    it('ignores whitespace before, between & after numbers (rgba)', function() {
+      expect(ol.color.fromString('rgba( \t 0  ,   0 \n ,   255  ,   0.4711   )')).to.eql(
+          [0, 0, 255, 0.4711]);
+    });
+
+    it('caches parsed values', function() {
+      var count = ol.color.fromStringInternal_.callCount;
+      ol.color.fromString('aquamarine');
+      expect(ol.color.fromStringInternal_.callCount).to.be(count + 1);
+      ol.color.fromString('aquamarine');
+      expect(ol.color.fromStringInternal_.callCount).to.be(count + 1);
+    });
 
     it('throws an error on invalid colors', function() {
       var invalidColors = ['tuesday', '#1234567', 'rgb(255.0,0,0)'];
@@ -99,28 +134,6 @@ describe('ol.color', function() {
           ol.color.fromString(invalidColors[i]);
         }).to.throwException();
       }
-    });
-
-  });
-
-  describe('ol.color.isValid', function() {
-
-    it('identifies valid colors', function() {
-      expect(ol.color.isValid([0, 0, 0, 0])).to.be(true);
-      expect(ol.color.isValid([255, 255, 255, 1])).to.be(true);
-    });
-
-    it('identifies out-of-range channels', function() {
-      expect(ol.color.isValid([-1, 0, 0, 0])).to.be(false);
-      expect(ol.color.isValid([256, 0, 0, 0])).to.be(false);
-      expect(ol.color.isValid([0, -1, 0, 0])).to.be(false);
-      expect(ol.color.isValid([0, 256, 0, 0])).to.be(false);
-      expect(ol.color.isValid([0, 0, -1, 0])).to.be(false);
-      expect(ol.color.isValid([0, 0, 256, 0])).to.be(false);
-      expect(ol.color.isValid([0, 0, -1, 0])).to.be(false);
-      expect(ol.color.isValid([0, 0, 256, 0])).to.be(false);
-      expect(ol.color.isValid([0, 0, 0, -1])).to.be(false);
-      expect(ol.color.isValid([0, 0, 0, 2])).to.be(false);
     });
 
   });
@@ -153,6 +166,3 @@ describe('ol.color', function() {
 
   });
 });
-
-
-goog.require('ol.color');

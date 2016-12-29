@@ -19,11 +19,26 @@ page.open(url).then(function(status) {
         }
         console.error(failedTests.length + ' test(s) failed.');
       } else {
+        // check for cov here
+        var coverage = page.evaluate(function() {
+          return window.__coverage__;
+        });
+
+        if (coverage) {
+          console.log('Writing coverage to coverage/coverage-rendering.json');
+          var fs = require('fs');
+          fs.write(
+            fs.workingDirectory + '/coverage/coverage-rendering.json',
+            JSON.stringify(coverage),
+            'w'
+          );
+        }
         console.log('All tests passed.');
       }
+
       page.close();
       phantom.exit(failedTests.length === 0 ? 0 : 1);
-    }
+    };
   } else {
     console.error('The tests could not be started. Is the server running?');
     page.close();

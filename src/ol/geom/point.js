@@ -1,5 +1,6 @@
 goog.provide('ol.geom.Point');
 
+goog.require('ol');
 goog.require('ol.extent');
 goog.require('ol.geom.GeometryLayout');
 goog.require('ol.geom.GeometryType');
@@ -19,10 +20,10 @@ goog.require('ol.math');
  * @api stable
  */
 ol.geom.Point = function(coordinates, opt_layout) {
-  goog.base(this);
+  ol.geom.SimpleGeometry.call(this);
   this.setCoordinates(coordinates, opt_layout);
 };
-goog.inherits(ol.geom.Point, ol.geom.SimpleGeometry);
+ol.inherits(ol.geom.Point, ol.geom.SimpleGeometry);
 
 
 /**

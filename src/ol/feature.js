@@ -1,7 +1,6 @@
 goog.provide('ol.Feature');
-goog.provide('ol.FeatureStyleFunction');
 
-goog.require('goog.asserts');
+goog.require('ol.asserts');
 goog.require('ol.events');
 goog.require('ol.events.EventType');
 goog.require('ol');
@@ -57,7 +56,7 @@ goog.require('ol.style.Style');
  */
 ol.Feature = function(opt_geometryOrProperties) {
 
-  goog.base(this);
+  ol.Object.call(this);
 
   /**
    * @private
@@ -87,7 +86,7 @@ ol.Feature = function(opt_geometryOrProperties) {
 
   /**
    * @private
-   * @type {?ol.events.Key}
+   * @type {?ol.EventsKey}
    */
   this.geometryChangeKey_ = null;
 
@@ -101,15 +100,13 @@ ol.Feature = function(opt_geometryOrProperties) {
       var geometry = opt_geometryOrProperties;
       this.setGeometry(geometry);
     } else {
-      goog.asserts.assert(goog.isObject(opt_geometryOrProperties),
-          'opt_geometryOrProperties should be an Object');
       /** @type {Object.<string, *>} */
       var properties = opt_geometryOrProperties;
       this.setProperties(properties);
     }
   }
 };
-goog.inherits(ol.Feature, ol.Object);
+ol.inherits(ol.Feature, ol.Object);
 
 
 /**
@@ -173,8 +170,8 @@ ol.Feature.prototype.getGeometryName = function() {
 
 
 /**
- * Get the feature's style.  This return for this method depends on what was
- * provided to the {@link ol.Feature#setStyle} method.
+ * Get the feature's style. Will return what was provided to the
+ * {@link ol.Feature#setStyle} method.
  * @return {ol.style.Style|Array.<ol.style.Style>|
  *     ol.FeatureStyleFunction} The feature style.
  * @api stable
@@ -285,18 +282,6 @@ ol.Feature.prototype.setGeometryName = function(name) {
 
 
 /**
- * A function that returns an array of {@link ol.style.Style styles} given a
- * resolution. The `this` keyword inside the function references the
- * {@link ol.Feature} to be styled.
- *
- * @typedef {function(this: ol.Feature, number):
- *     (ol.style.Style|Array.<ol.style.Style>)}
- * @api stable
- */
-ol.FeatureStyleFunction;
-
-
-/**
  * Convert the provided object into a feature style function.  Functions passed
  * through unchanged.  Arrays of ol.style.Style or single style objects wrapped
  * in a new feature style function.
@@ -307,7 +292,7 @@ ol.FeatureStyleFunction;
 ol.Feature.createStyleFunction = function(obj) {
   var styleFunction;
 
-  if (goog.isFunction(obj)) {
+  if (typeof obj === 'function') {
     styleFunction = obj;
   } else {
     /**
@@ -317,8 +302,8 @@ ol.Feature.createStyleFunction = function(obj) {
     if (Array.isArray(obj)) {
       styles = obj;
     } else {
-      goog.asserts.assertInstanceof(obj, ol.style.Style,
-          'obj should be an ol.style.Style');
+      ol.asserts.assert(obj instanceof ol.style.Style,
+          41); // Expected an `ol.style.Style` or an array of `ol.style.Style`
       styles = [obj];
     }
     styleFunction = function() {

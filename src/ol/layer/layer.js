@@ -5,8 +5,8 @@ goog.require('ol.events.EventType');
 goog.require('ol');
 goog.require('ol.Object');
 goog.require('ol.layer.Base');
-goog.require('ol.layer.LayerProperty');
-goog.require('ol.object');
+goog.require('ol.layer.Property');
+goog.require('ol.obj');
 goog.require('ol.render.EventType');
 goog.require('ol.source.State');
 
@@ -34,26 +34,26 @@ goog.require('ol.source.State');
  */
 ol.layer.Layer = function(options) {
 
-  var baseOptions = ol.object.assign({}, options);
+  var baseOptions = ol.obj.assign({}, options);
   delete baseOptions.source;
 
-  goog.base(this, /** @type {olx.layer.BaseOptions} */ (baseOptions));
+  ol.layer.Base.call(this, /** @type {olx.layer.BaseOptions} */ (baseOptions));
 
   /**
    * @private
-   * @type {?ol.events.Key}
+   * @type {?ol.EventsKey}
    */
   this.mapPrecomposeKey_ = null;
 
   /**
    * @private
-   * @type {?ol.events.Key}
+   * @type {?ol.EventsKey}
    */
   this.mapRenderKey_ = null;
 
   /**
    * @private
-   * @type {?ol.events.Key}
+   * @type {?ol.EventsKey}
    */
   this.sourceChangeKey_ = null;
 
@@ -62,20 +62,20 @@ ol.layer.Layer = function(options) {
   }
 
   ol.events.listen(this,
-      ol.Object.getChangeEventType(ol.layer.LayerProperty.SOURCE),
+      ol.Object.getChangeEventType(ol.layer.Property.SOURCE),
       this.handleSourcePropertyChange_, this);
 
   var source = options.source ? options.source : null;
   this.setSource(source);
 };
-goog.inherits(ol.layer.Layer, ol.layer.Base);
+ol.inherits(ol.layer.Layer, ol.layer.Base);
 
 
 /**
  * Return `true` if the layer is visible, and if the passed resolution is
  * between the layer's minResolution and maxResolution. The comparison is
  * inclusive for `minResolution` and exclusive for `maxResolution`.
- * @param {ol.layer.LayerState} layerState Layer state.
+ * @param {ol.LayerState} layerState Layer state.
  * @param {number} resolution Resolution.
  * @return {boolean} The layer is visible at the given resolution.
  */
@@ -112,7 +112,7 @@ ol.layer.Layer.prototype.getLayerStatesArray = function(opt_states) {
  * @api stable
  */
 ol.layer.Layer.prototype.getSource = function() {
-  var source = this.get(ol.layer.LayerProperty.SOURCE);
+  var source = this.get(ol.layer.Property.SOURCE);
   return /** @type {ol.source.Source} */ (source) || null;
 };
 
@@ -182,7 +182,7 @@ ol.layer.Layer.prototype.setMap = function(map) {
           layerState.managed = false;
           layerState.zIndex = Infinity;
           evt.frameState.layerStatesArray.push(layerState);
-          evt.frameState.layerStates[goog.getUid(this)] = layerState;
+          evt.frameState.layerStates[ol.getUid(this)] = layerState;
         }, this);
     this.mapRenderKey_ = ol.events.listen(
         this, ol.events.EventType.CHANGE, map.render, map);
@@ -198,5 +198,5 @@ ol.layer.Layer.prototype.setMap = function(map) {
  * @api stable
  */
 ol.layer.Layer.prototype.setSource = function(source) {
-  this.set(ol.layer.LayerProperty.SOURCE, source);
+  this.set(ol.layer.Property.SOURCE, source);
 };

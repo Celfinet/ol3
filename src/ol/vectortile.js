@@ -1,23 +1,10 @@
 goog.provide('ol.VectorTile');
 
+goog.require('ol');
 goog.require('ol.Tile');
-goog.require('ol.TileCoord');
-goog.require('ol.TileLoadFunctionType');
 goog.require('ol.TileState');
 goog.require('ol.dom');
-goog.require('ol.proj.Projection');
-
-
-/**
- * @typedef {{
- *     dirty: boolean,
- *     renderedRenderOrder: (null|function(ol.Feature, ol.Feature):number),
- *     renderedTileRevision: number,
- *     renderedRevision: number,
- *     replayGroup: ol.render.IReplayGroup,
- *     skippedFeatures: Array.<string>}}
- */
-ol.TileReplayState;
+goog.require('ol.featureloader');
 
 
 /**
@@ -31,7 +18,7 @@ ol.TileReplayState;
  */
 ol.VectorTile = function(tileCoord, state, src, format, tileLoadFunction) {
 
-  goog.base(this, tileCoord, state);
+  ol.Tile.call(this, tileCoord, state);
 
   /**
    * @private
@@ -73,8 +60,7 @@ ol.VectorTile = function(tileCoord, state, src, format, tileLoadFunction) {
     renderedRenderOrder: null,
     renderedRevision: -1,
     renderedTileRevision: -1,
-    replayGroup: null,
-    skippedFeatures: []
+    replayGroup: null
   };
 
   /**
@@ -90,7 +76,7 @@ ol.VectorTile = function(tileCoord, state, src, format, tileLoadFunction) {
   this.url_ = src;
 
 };
-goog.inherits(ol.VectorTile, ol.Tile);
+ol.inherits(ol.VectorTile, ol.Tile);
 
 
 /**
@@ -165,6 +151,25 @@ ol.VectorTile.prototype.load = function() {
 
 
 /**
+ * Handler for successful tile load.
+ * @param {Array.<ol.Feature>} features The loaded features.
+ * @param {ol.proj.Projection} dataProjection Data projection.
+ */
+ol.VectorTile.prototype.onLoad_ = function(features, dataProjection) {
+  this.setProjection(dataProjection);
+  this.setFeatures(features);
+};
+
+
+/**
+ * Handler for tile load errors.
+ */
+ol.VectorTile.prototype.onError_ = function() {
+  this.setState(ol.TileState.ERROR);
+};
+
+
+/**
  * @param {Array.<ol.Feature>} features Features.
  * @api
  */
@@ -200,4 +205,17 @@ ol.VectorTile.prototype.setState = function(tileState) {
  */
 ol.VectorTile.prototype.setLoader = function(loader) {
   this.loader_ = loader;
+};
+
+
+/**
+ * Sets the loader for a tile.
+ * @param {ol.VectorTile} tile Vector tile.
+ * @param {string} url URL.
+ */
+ol.VectorTile.defaultLoadFunction = function(tile, url) {
+  var loader = ol.featureloader.loadFeaturesXhr(
+      url, tile.getFormat(), tile.onLoad_.bind(tile), tile.onError_.bind(tile));
+
+  tile.setLoader(loader);
 };

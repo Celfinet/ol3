@@ -1,6 +1,6 @@
 goog.provide('ol.geom.MultiPoint');
 
-goog.require('goog.asserts');
+goog.require('ol');
 goog.require('ol.array');
 goog.require('ol.extent');
 goog.require('ol.geom.GeometryLayout');
@@ -23,10 +23,10 @@ goog.require('ol.math');
  * @api stable
  */
 ol.geom.MultiPoint = function(coordinates, opt_layout) {
-  goog.base(this);
+  ol.geom.SimpleGeometry.call(this);
   this.setCoordinates(coordinates, opt_layout);
 };
-goog.inherits(ol.geom.MultiPoint, ol.geom.SimpleGeometry);
+ol.inherits(ol.geom.MultiPoint, ol.geom.SimpleGeometry);
 
 
 /**
@@ -35,7 +35,7 @@ goog.inherits(ol.geom.MultiPoint, ol.geom.SimpleGeometry);
  * @api stable
  */
 ol.geom.MultiPoint.prototype.appendPoint = function(point) {
-  goog.asserts.assert(point.getLayout() == this.layout,
+  ol.DEBUG && console.assert(point.getLayout() == this.layout,
       'the layout of point should match layout');
   if (!this.flatCoordinates) {
     this.flatCoordinates = point.getFlatCoordinates().slice();
@@ -104,7 +104,7 @@ ol.geom.MultiPoint.prototype.getCoordinates = function() {
 ol.geom.MultiPoint.prototype.getPoint = function(index) {
   var n = !this.flatCoordinates ?
       0 : this.flatCoordinates.length / this.stride;
-  goog.asserts.assert(0 <= index && index < n,
+  ol.DEBUG && console.assert(0 <= index && index < n,
       'index should be in between 0 and n');
   if (index < 0 || n <= index) {
     return null;

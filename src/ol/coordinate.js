@@ -1,27 +1,7 @@
-goog.provide('ol.Coordinate');
-goog.provide('ol.CoordinateFormatType');
 goog.provide('ol.coordinate');
 
 goog.require('ol.math');
 goog.require('ol.string');
-
-
-/**
- * A function that takes a {@link ol.Coordinate} and transforms it into a
- * `{string}`.
- *
- * @typedef {function((ol.Coordinate|undefined)): string}
- * @api stable
- */
-ol.CoordinateFormatType;
-
-
-/**
- * An array of numbers representing an xy coordinate. Example: `[16, 48]`.
- * @typedef {Array.<number>} ol.Coordinate
- * @api stable
- */
-ol.Coordinate;
 
 
 /**
@@ -338,29 +318,4 @@ ol.coordinate.toStringHDMS = function(coordinate, opt_fractionDigits) {
  */
 ol.coordinate.toStringXY = function(coordinate, opt_fractionDigits) {
   return ol.coordinate.format(coordinate, '{x}, {y}', opt_fractionDigits);
-};
-
-
-/**
- * Create an ol.Coordinate from an Array and take into account axis order.
- *
- * Examples:
- *
- *     var northCoord = ol.coordinate.fromProjectedArray([1, 2], 'n');
- *     // northCoord is now [2, 1]
- *
- *     var eastCoord = ol.coordinate.fromProjectedArray([1, 2], 'e');
- *     // eastCoord is now [1, 2]
- *
- * @param {Array} array The array with coordinates.
- * @param {string} axis the axis info.
- * @return {ol.Coordinate} The coordinate created.
- */
-ol.coordinate.fromProjectedArray = function(array, axis) {
-  var firstAxis = axis.charAt(0);
-  if (firstAxis === 'n' || firstAxis === 's') {
-    return [array[1], array[0]];
-  } else {
-    return array;
-  }
 };

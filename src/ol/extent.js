@@ -1,46 +1,9 @@
-goog.provide('ol.Extent');
 goog.provide('ol.extent');
-goog.provide('ol.extent.Corner');
-goog.provide('ol.extent.Relationship');
 
-goog.require('goog.asserts');
-goog.require('ol.Coordinate');
-goog.require('ol.Size');
-goog.require('ol.TransformFunction');
-
-
-/**
- * An array of numbers representing an extent: `[minx, miny, maxx, maxy]`.
- * @typedef {Array.<number>}
- * @api stable
- */
-ol.Extent;
-
-
-/**
- * Extent corner.
- * @enum {string}
- */
-ol.extent.Corner = {
-  BOTTOM_LEFT: 'bottom-left',
-  BOTTOM_RIGHT: 'bottom-right',
-  TOP_LEFT: 'top-left',
-  TOP_RIGHT: 'top-right'
-};
-
-
-/**
- * Relationship to an extent.
- * @enum {number}
- */
-ol.extent.Relationship = {
-  UNKNOWN: 0,
-  INTERSECTING: 1,
-  ABOVE: 2,
-  RIGHT: 4,
-  BELOW: 8,
-  LEFT: 16
-};
+goog.require('ol');
+goog.require('ol.asserts');
+goog.require('ol.extent.Corner');
+goog.require('ol.extent.Relationship');
 
 
 /**
@@ -67,8 +30,8 @@ ol.extent.boundingExtent = function(coordinates) {
  * @return {ol.Extent} Extent.
  */
 ol.extent.boundingExtentXYs_ = function(xs, ys, opt_extent) {
-  goog.asserts.assert(xs.length > 0, 'xs length should be larger than 0');
-  goog.asserts.assert(ys.length > 0, 'ys length should be larger than 0');
+  ol.DEBUG && console.assert(xs.length > 0, 'xs length should be larger than 0');
+  ol.DEBUG && console.assert(ys.length > 0, 'ys length should be larger than 0');
   var minX = Math.min.apply(null, xs);
   var minY = Math.min.apply(null, ys);
   var maxX = Math.max.apply(null, xs);
@@ -319,18 +282,6 @@ ol.extent.createOrUpdateFromRings = function(rings, opt_extent) {
 
 
 /**
- * Empty an extent in place.
- * @param {ol.Extent} extent Extent.
- * @return {ol.Extent} Extent.
- */
-ol.extent.empty = function(extent) {
-  extent[0] = extent[1] = Infinity;
-  extent[2] = extent[3] = -Infinity;
-  return extent;
-};
-
-
-/**
  * Determine if two extents are equivalent.
  * @param {ol.Extent} extent1 Extent 1.
  * @param {ol.Extent} extent2 Extent 2.
@@ -540,10 +491,9 @@ ol.extent.getCorner = function(extent, corner) {
   } else if (corner === ol.extent.Corner.TOP_RIGHT) {
     coordinate = ol.extent.getTopRight(extent);
   } else {
-    goog.asserts.fail('Invalid corner: %s', corner);
+    ol.asserts.assert(false, 13); // Invalid corner
   }
-  goog.asserts.assert(coordinate, 'coordinate should be defined');
-  return coordinate;
+  return /** @type {!ol.Coordinate} */ (coordinate);
 };
 
 
@@ -734,29 +684,6 @@ ol.extent.isEmpty = function(extent) {
 
 /**
  * @param {ol.Extent} extent Extent.
- * @return {boolean} Is infinite.
- */
-ol.extent.isInfinite = function(extent) {
-  return extent[0] == -Infinity || extent[1] == -Infinity ||
-      extent[2] == Infinity || extent[3] == Infinity;
-};
-
-
-/**
- * @param {ol.Extent} extent Extent.
- * @param {ol.Coordinate} coordinate Coordinate.
- * @return {ol.Coordinate} Coordinate.
- */
-ol.extent.normalize = function(extent, coordinate) {
-  return [
-    (coordinate[0] - extent[0]) / (extent[2] - extent[0]),
-    (coordinate[1] - extent[1]) / (extent[3] - extent[1])
-  ];
-};
-
-
-/**
- * @param {ol.Extent} extent Extent.
  * @param {ol.Extent=} opt_extent Extent.
  * @return {ol.Extent} Extent.
  */
@@ -840,19 +767,6 @@ ol.extent.intersectsSegment = function(extent, start, end) {
 
   }
   return intersects;
-};
-
-
-/**
- * @param {ol.Extent} extent1 Extent 1.
- * @param {ol.Extent} extent2 Extent 2.
- * @return {boolean} Touches.
- */
-ol.extent.touches = function(extent1, extent2) {
-  var intersects = ol.extent.intersects(extent1, extent2);
-  return intersects &&
-      (extent1[0] == extent2[2] || extent1[2] == extent2[0] ||
-       extent1[1] == extent2[3] || extent1[3] == extent2[1]);
 };
 
 

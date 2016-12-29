@@ -1,16 +1,4 @@
-goog.provide('ol.Size');
 goog.provide('ol.size');
-
-
-goog.require('goog.asserts');
-
-
-/**
- * An array of numbers representing a size: `[width, height]`.
- * @typedef {Array.<number>}
- * @api stable
- */
-ol.Size;
 
 
 /**
@@ -27,17 +15,6 @@ ol.size.buffer = function(size, buffer, opt_size) {
   opt_size[0] = size[0] + 2 * buffer;
   opt_size[1] = size[1] + 2 * buffer;
   return opt_size;
-};
-
-
-/**
- * Compares sizes for equality.
- * @param {ol.Size} a Size.
- * @param {ol.Size} b Size.
- * @return {boolean} Equals.
- */
-ol.size.equals = function(a, b) {
-  return a[0] == b[0] && a[1] == b[1];
 };
 
 
@@ -81,12 +58,10 @@ ol.size.toSize = function(size, opt_size) {
   if (Array.isArray(size)) {
     return size;
   } else {
-    goog.asserts.assert(goog.isNumber(size));
     if (opt_size === undefined) {
       opt_size = [size, size];
     } else {
-      opt_size[0] = size;
-      opt_size[1] = size;
+      opt_size[0] = opt_size[1] = /** @type {number} */ (size);
     }
     return opt_size;
   }

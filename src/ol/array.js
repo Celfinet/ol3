@@ -1,6 +1,6 @@
 goog.provide('ol.array');
 
-goog.require('goog.asserts');
+goog.require('ol');
 
 
 /**
@@ -36,38 +36,6 @@ ol.array.binarySearch = function(haystack, needle, opt_comparator) {
 
   /* Key not found. */
   return found ? low : ~low;
-}
-
-/**
- * @param {Array.<number>} arr Array.
- * @param {number} target Target.
- * @return {number} Index.
- */
-ol.array.binaryFindNearest = function(arr, target) {
-  var index = ol.array.binarySearch(arr, target,
-      /**
-       * @param {number} a A.
-       * @param {number} b B.
-       * @return {number} b minus a.
-       */
-      function(a, b) {
-        return b - a;
-      });
-  if (index >= 0) {
-    return index;
-  } else if (index == -1) {
-    return 0;
-  } else if (index == -arr.length - 1) {
-    return arr.length - 1;
-  } else {
-    var left = -index - 2;
-    var right = -index - 1;
-    if (arr[left] - target < target - arr[right]) {
-      return left;
-    } else {
-      return right;
-    }
-  }
 };
 
 
@@ -135,9 +103,6 @@ ol.array.linearFindNearest = function(arr, target, direction) {
         }
       }
     }
-    // We should never get here, but the compiler complains
-    // if it finds a path for which no number is returned.
-    goog.asserts.fail();
     return n - 1;
   }
 };
@@ -149,9 +114,9 @@ ol.array.linearFindNearest = function(arr, target, direction) {
  * @param {number} end End index.
  */
 ol.array.reverseSubArray = function(arr, begin, end) {
-  goog.asserts.assert(begin >= 0,
+  ol.DEBUG && console.assert(begin >= 0,
       'Array begin index should be equal to or greater than 0');
-  goog.asserts.assert(end < arr.length,
+  ol.DEBUG && console.assert(end < arr.length,
       'Array end index should be less than the array length');
   while (begin < end) {
     var tmp = arr[begin];
@@ -187,12 +152,12 @@ ol.array.flatten = function(arr) {
  */
 ol.array.extend = function(arr, data) {
   var i;
-  var extension = goog.isArrayLike(data) ? data : [data];
-  var length = extension.length
+  var extension = Array.isArray(data) ? data : [data];
+  var length = extension.length;
   for (i = 0; i < length; i++) {
     arr[arr.length] = extension[i];
   }
-}
+};
 
 
 /**
@@ -208,7 +173,7 @@ ol.array.remove = function(arr, obj) {
     arr.splice(i, 1);
   }
   return found;
-}
+};
 
 
 /**
@@ -228,7 +193,7 @@ ol.array.find = function(arr, func) {
     }
   }
   return null;
-}
+};
 
 
 /**
@@ -247,7 +212,7 @@ ol.array.equals = function(arr1, arr2) {
     }
   }
   return true;
-}
+};
 
 
 /**
@@ -267,7 +232,7 @@ ol.array.stableSort = function(arr, compareFnc) {
   for (i = 0; i < arr.length; i++) {
     arr[i] = tmp[i].value;
   }
-}
+};
 
 
 /**
@@ -282,7 +247,7 @@ ol.array.findIndex = function(arr, func) {
     return !func(el, idx, arr);
   });
   return found ? index : -1;
-}
+};
 
 
 /**
@@ -300,4 +265,4 @@ ol.array.isSorted = function(arr, opt_func, opt_strict) {
     var res = compare(arr[index - 1], currentVal);
     return !(res > 0 || opt_strict && res === 0);
   });
-}
+};
